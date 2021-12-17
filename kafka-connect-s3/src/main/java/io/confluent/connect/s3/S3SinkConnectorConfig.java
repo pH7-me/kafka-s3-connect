@@ -163,6 +163,17 @@ public class S3SinkConnectorConfig extends StorageSinkConnectorConfig {
   public static final String S3_RETRY_BACKOFF_CONFIG = "s3.retry.backoff.ms";
   public static final int S3_RETRY_BACKOFF_DEFAULT = 200;
 
+  /**
+   * Elastic buffer to save memory. {@link io.confluent.connect.s3.storage.S3OutputStream#buffer}
+   */
+
+  public static final String ELASTIC_BUFFER_ENABLE = "s3.elastic.buffer.enable";
+  public static final boolean ELASTIC_BUFFER_ENABLE_DEFAULT = false;
+
+  public static final String ELASTIC_BUFFER_INIT_CAPACITY = "s3.elastic.buffer.init.capacity";
+  public static final int ELASTIC_BUFFER_INIT_CAPACITY_DEFAULT = 128 * 1024;  // 128KB
+
+
   public static final String S3_PATH_STYLE_ACCESS_ENABLED_CONFIG = "s3.path.style.access.enabled";
   public static final boolean S3_PATH_STYLE_ACCESS_ENABLED_DEFAULT = true;
 
@@ -595,6 +606,32 @@ public class S3SinkConnectorConfig extends StorageSinkConnectorConfig {
           Width.SHORT,
           "Behavior for null-valued records"
       );
+
+      configDef.define(
+              ELASTIC_BUFFER_ENABLE,
+              Type.BOOLEAN,
+              ELASTIC_BUFFER_ENABLE_DEFAULT,
+              Importance.LOW,
+              "Elastic buffer to staging s3-part for saving memory.",
+              group,
+              ++orderInGroup,
+              Width.LONG,
+              "Enable elastic buffer to staging s3-part"
+      );
+
+      configDef.define(
+              ELASTIC_BUFFER_INIT_CAPACITY,
+              Type.INT,
+              ELASTIC_BUFFER_INIT_CAPACITY_DEFAULT,
+              atLeast(4096),
+              Importance.LOW,
+              "Elastic buffer initial capacity.",
+              group,
+              ++orderInGroup,
+              Width.LONG,
+              "Elastic buffer initial capacity"
+      );
+
     }
 
     {
@@ -710,6 +747,14 @@ public class S3SinkConnectorConfig extends StorageSinkConnectorConfig {
     for (String key : parsedProps.keySet()) {
       propertyToConfig.put(key, config);
     }
+  }
+
+  public boolean getElasticBufferEnable() {
+    return getBoolean(ELASTIC_BUFFER_ENABLE);
+  }
+
+  public int getElasticBufferInitCap() {
+    return getInt(ELASTIC_BUFFER_INIT_CAPACITY);
   }
 
   public String getBucketName() {
