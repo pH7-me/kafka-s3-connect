@@ -19,6 +19,7 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import io.confluent.connect.s3.format.bytearray.ByteArrayFormat;
 import io.confluent.connect.s3.format.parquet.ParquetFormat;
+import io.confluent.connect.s3.partitioner.MultiFieldPartitioner;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.ConfigValue;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -110,7 +111,8 @@ public class S3SinkConnectorConfigTest extends S3SinkConnectorTestBase {
         HourlyPartitioner.class,
         DailyPartitioner.class,
         TimeBasedPartitioner.class,
-        FieldPartitioner.class
+        FieldPartitioner.class,
+        MultiFieldPartitioner.class
     );
 
     List<ConfigValue> values = S3SinkConnectorConfig.getConfig().validate(properties);

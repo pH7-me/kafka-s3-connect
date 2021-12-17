@@ -22,6 +22,7 @@ import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.SSEAlgorithm;
+import io.confluent.connect.s3.partitioner.MultiFieldPartitioner;
 import org.apache.kafka.common.Configurable;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -223,7 +224,8 @@ public class S3SinkConnectorConfig extends StorageSinkConnectorConfig {
             HourlyPartitioner.class,
             DailyPartitioner.class,
             TimeBasedPartitioner.class,
-            FieldPartitioner.class
+            FieldPartitioner.class,
+            MultiFieldPartitioner.class
         )
     );
   }
