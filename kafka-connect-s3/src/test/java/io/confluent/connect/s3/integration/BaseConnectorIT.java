@@ -15,6 +15,8 @@
 
 package io.confluent.connect.s3.integration;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
@@ -34,8 +36,6 @@ import org.junit.Before;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @Category(IntegrationTest.class)
 public abstract class BaseConnectorIT {
@@ -64,9 +64,7 @@ public abstract class BaseConnectorIT {
   }
 
   protected void startConnect() {
-    connect = new EmbeddedConnectCluster.Builder()
-        .name("s3-connect-cluster")
-        .build();
+    connect = new EmbeddedConnectCluster.Builder().name("s3-connect-cluster").build();
 
     // start the clusters
     connect.start();
@@ -76,7 +74,7 @@ public abstract class BaseConnectorIT {
    * Wait up to {@link #CONNECTOR_STARTUP_DURATION_MS maximum time limit} for the connector with the
    * given name to start the specified number of tasks.
    *
-   * @param name     the name of the connector
+   * @param name the name of the connector
    * @param numTasks the minimum number of tasks that are expected
    * @return the time this method discovered the connector has started, in milliseconds past epoch
    * @throws InterruptedException if this was interrupted
@@ -85,8 +83,7 @@ public abstract class BaseConnectorIT {
     TestUtils.waitForCondition(
         () -> assertConnectorAndTasksRunning(name, numTasks).orElse(false),
         CONNECTOR_STARTUP_DURATION_MS,
-        "Connector tasks did not start in time."
-    );
+        "Connector tasks did not start in time.");
     return System.currentTimeMillis();
   }
 
@@ -94,8 +91,8 @@ public abstract class BaseConnectorIT {
    * Wait up to {@link #S3_TIMEOUT_MS maximum time limit} for the connector to write the specified
    * number of files.
    *
-   * @param bucketName  S3 bucket name
-   * @param numFiles    expected number of files in the bucket
+   * @param bucketName S3 bucket name
+   * @param numFiles expected number of files in the bucket
    * @return the time this method discovered the connector has written the files
    * @throws InterruptedException if this was interrupted
    */
@@ -103,8 +100,7 @@ public abstract class BaseConnectorIT {
     TestUtils.waitForCondition(
         () -> assertFileCountInBucket(bucketName, numFiles).orElse(false),
         S3_TIMEOUT_MS,
-        "Files not written to S3 bucket in time."
-    );
+        "Files not written to S3 bucket in time.");
     return System.currentTimeMillis();
   }
 
@@ -112,17 +108,18 @@ public abstract class BaseConnectorIT {
    * Confirm that a connector with an exact number of tasks is running.
    *
    * @param connectorName the connector
-   * @param numTasks      the minimum number of tasks
+   * @param numTasks the minimum number of tasks
    * @return true if the connector and tasks are in RUNNING state; false otherwise
    */
   protected Optional<Boolean> assertConnectorAndTasksRunning(String connectorName, int numTasks) {
     try {
       ConnectorStateInfo info = connect.connectorStatus(connectorName);
-      boolean result = info != null
-          && info.tasks().size() >= numTasks
-          && info.connector().state().equals(AbstractStatus.State.RUNNING.toString())
-          && info.tasks().stream()
-          .allMatch(s -> s.state().equals(AbstractStatus.State.RUNNING.toString()));
+      boolean result =
+          info != null
+              && info.tasks().size() >= numTasks
+              && info.connector().state().equals(AbstractStatus.State.RUNNING.toString())
+              && info.tasks().stream()
+                  .allMatch(s -> s.state().equals(AbstractStatus.State.RUNNING.toString()));
       return Optional.of(result);
     } catch (Exception e) {
       log.warn("Could not check connector state info.");
@@ -158,49 +155,39 @@ public abstract class BaseConnectorIT {
     ListObjectsV2Result result;
     do {
       /*
-       Need the result object to extract the continuation token from the request as each request
-       to listObjectsV2() returns a maximum of 1000 files.
-       */
+      Need the result object to extract the continuation token from the request as each request
+      to listObjectsV2() returns a maximum of 1000 files.
+      */
       result = S3Client.listObjectsV2(request);
       totalFilesInBucket += result.getKeyCount();
       String token = result.getNextContinuationToken();
       // To get the next batch of files.
       request.setContinuationToken(token);
-    } while(result.isTruncated());
+    } while (result.isTruncated());
     return totalFilesInBucket;
   }
 
   /**
    * Get a list of the expected filenames for the bucket.
-   * <p>
-   * Format: topics/s3_topic/partition=97/s3_topic+97+0000000001.avro
    *
-   * @param topic      the test kafka topic
-   * @param partition  the expected partition for the tests
-   * @param flushSize  the flush size connector config
+   * <p>Format: topics/s3_topic/partition=97/s3_topic+97+0000000001.avro
+   *
+   * @param topic the test kafka topic
+   * @param partition the expected partition for the tests
+   * @param flushSize the flush size connector config
    * @param numRecords the number of records produced in the test
-   * @param extension  the expected extensions of the files including compression (snappy.parquet)
+   * @param extension the expected extensions of the files including compression (snappy.parquet)
    * @return the list of expected filenames
    */
   protected List<String> getExpectedFilenames(
-      String topic,
-      int partition,
-      int flushSize,
-      long numRecords,
-      String extension
-  ) {
+      String topic, int partition, int flushSize, long numRecords, String extension) {
     int expectedFileCount = (int) numRecords / flushSize;
     List<String> expectedFiles = new ArrayList<>();
     for (int offset = 0; offset < expectedFileCount * flushSize; offset += flushSize) {
-      String filepath = String.format(
-          "topics/%s/partition=%d/%s+%d+%010d.%s",
-          topic,
-          partition,
-          topic,
-          partition,
-          offset,
-          extension
-      );
+      String filepath =
+          String.format(
+              "topics/%s/partition=%d/%s+%d+%010d.%s",
+              topic, partition, topic, partition, offset, extension);
       expectedFiles.add(filepath);
     }
     return expectedFiles;
@@ -209,7 +196,7 @@ public abstract class BaseConnectorIT {
   /**
    * Check if the file names in the bucket have the expected namings.
    *
-   * @param bucketName    the name of the bucket with the files
+   * @param bucketName the name of the bucket with the files
    * @param expectedFiles the list of expected filenames for exact comparison
    * @return whether all the files in the bucket match the expected values
    */
@@ -230,9 +217,9 @@ public abstract class BaseConnectorIT {
     ListObjectsV2Result result;
     do {
       /*
-       Need the result object to extract the continuation token from the request as each request
-       to listObjectsV2() returns a maximum of 1000 files.
-       */
+      Need the result object to extract the continuation token from the request as each request
+      to listObjectsV2() returns a maximum of 1000 files.
+      */
       result = S3Client.listObjectsV2(request);
       for (S3ObjectSummary file : result.getObjectSummaries()) {
         actualFiles.add(file.getKey());
@@ -240,7 +227,7 @@ public abstract class BaseConnectorIT {
       String token = result.getNextContinuationToken();
       // To get the next batch of files.
       request.setContinuationToken(token);
-    } while(result.isTruncated());
+    } while (result.isTruncated());
     return actualFiles;
   }
 }

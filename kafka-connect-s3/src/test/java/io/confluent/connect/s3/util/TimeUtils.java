@@ -22,7 +22,8 @@ import org.joda.time.format.DateTimeFormatter;
 
 public class TimeUtils {
 
-  public static String encodeTimestamp(long partitionDurationMs, String pathFormat, String timeZoneString, long timestamp) {
+  public static String encodeTimestamp(
+      long partitionDurationMs, String pathFormat, String timeZoneString, long timestamp) {
     DateTimeZone timeZone = DateTimeZone.forID(timeZoneString);
     DateTimeFormatter formatter = DateTimeFormat.forPattern(pathFormat).withZone(timeZone);
     DateTime partition = new DateTime(getPartition(partitionDurationMs, timestamp, timeZone));
@@ -34,5 +35,4 @@ public class TimeUtils {
     long partitionedTime = (adjustedTimeStamp / timeGranularityMs) * timeGranularityMs;
     return timeZone.convertLocalToUTC(partitionedTime, false);
   }
-
 }

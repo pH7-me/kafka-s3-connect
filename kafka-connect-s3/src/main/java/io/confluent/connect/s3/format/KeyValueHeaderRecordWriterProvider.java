@@ -16,24 +16,22 @@
 
 package io.confluent.connect.s3.format;
 
-
-import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
-import org.apache.kafka.connect.errors.DataException;
-import org.apache.kafka.connect.sink.SinkRecord;
+import static java.util.Objects.requireNonNull;
 
 import io.confluent.connect.s3.S3SinkConnectorConfig;
 import io.confluent.connect.storage.format.RecordWriter;
 import io.confluent.connect.storage.format.RecordWriterProvider;
+import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
+import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static java.util.Objects.requireNonNull;
-
 /**
- * A class that adds a record writer layer to manage writing values, keys and headers
- * with a single call. It provides an abstraction for writing, committing and
- * closing all three header, key and value files.
+ * A class that adds a record writer layer to manage writing values, keys and headers with a single
+ * call. It provides an abstraction for writing, committing and closing all three header, key and
+ * value files.
  */
 public class KeyValueHeaderRecordWriterProvider
     implements RecordWriterProvider<S3SinkConnectorConfig> {
@@ -41,14 +39,11 @@ public class KeyValueHeaderRecordWriterProvider
   private static final Logger log =
       LoggerFactory.getLogger(KeyValueHeaderRecordWriterProvider.class);
 
-  @NotNull
-  private final RecordWriterProvider<S3SinkConnectorConfig> valueProvider;
+  @NotNull private final RecordWriterProvider<S3SinkConnectorConfig> valueProvider;
 
-  @Nullable
-  private final RecordWriterProvider<S3SinkConnectorConfig> keyProvider;
+  @Nullable private final RecordWriterProvider<S3SinkConnectorConfig> keyProvider;
 
-  @Nullable
-  private final RecordWriterProvider<S3SinkConnectorConfig> headerProvider;
+  @Nullable private final RecordWriterProvider<S3SinkConnectorConfig> headerProvider;
 
   public KeyValueHeaderRecordWriterProvider(
       RecordWriterProvider<S3SinkConnectorConfig> valueProvider,
@@ -70,9 +65,10 @@ public class KeyValueHeaderRecordWriterProvider
     // Each provider will add its own extension. The filename comes in with the value file format,
     // e.g. filename.avro, but when the format class is different for the key or the headers the
     // extension needs to be removed.
-    String strippedFilename = filename.endsWith(valueProvider.getExtension())
-        ? filename.substring(0, filename.length() - valueProvider.getExtension().length())
-        : filename;
+    String strippedFilename =
+        filename.endsWith(valueProvider.getExtension())
+            ? filename.substring(0, filename.length() - valueProvider.getExtension().length())
+            : filename;
 
     RecordWriter valueWriter = valueProvider.getRecordWriter(conf, strippedFilename);
     RecordWriter keyWriter =
@@ -89,16 +85,14 @@ public class KeyValueHeaderRecordWriterProvider
         // keyWriter != null means writing keys is turned on
         if (keyWriter != null && sinkRecord.key() == null) {
           throw new DataException(
-              String.format("Key cannot be null for SinkRecord: %s", sinkRecord)
-          );
+              String.format("Key cannot be null for SinkRecord: %s", sinkRecord));
         }
 
         // headerWriter != null means writing headers is turned on
         if (headerWriter != null
             && (sinkRecord.headers() == null || sinkRecord.headers().isEmpty())) {
           throw new DataException(
-              String.format("Headers cannot be null for SinkRecord: %s", sinkRecord)
-          );
+              String.format("Headers cannot be null for SinkRecord: %s", sinkRecord));
         }
 
         valueWriter.write(sinkRecord); // null check happens in sink task

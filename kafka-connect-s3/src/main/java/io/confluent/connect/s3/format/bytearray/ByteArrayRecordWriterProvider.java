@@ -23,16 +23,15 @@ import io.confluent.connect.s3.storage.S3OutputStream;
 import io.confluent.connect.s3.storage.S3Storage;
 import io.confluent.connect.storage.format.RecordWriter;
 import io.confluent.connect.storage.format.RecordWriterProvider;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.RetriableException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 
 public class ByteArrayRecordWriterProvider extends RecordViewSetter
     implements RecordWriterProvider<S3SinkConnectorConfig> {
@@ -47,9 +46,8 @@ public class ByteArrayRecordWriterProvider extends RecordViewSetter
     this.storage = storage;
     this.converter = converter;
     this.extension = storage.conf().getByteArrayExtension();
-    this.lineSeparatorBytes = storage.conf()
-        .getFormatByteArrayLineSeparator()
-        .getBytes(StandardCharsets.UTF_8);
+    this.lineSeparatorBytes =
+        storage.conf().getFormatByteArrayLineSeparator().getBytes(StandardCharsets.UTF_8);
   }
 
   @Override
@@ -68,8 +66,11 @@ public class ByteArrayRecordWriterProvider extends RecordViewSetter
       public void write(SinkRecord record) {
         log.trace("Sink record with view {}: {}", recordView, record);
         try {
-          byte[] bytes = converter.fromConnectData(record.topic(),
-              recordView.getViewSchema(record, false), recordView.getView(record, false));
+          byte[] bytes =
+              converter.fromConnectData(
+                  record.topic(),
+                  recordView.getViewSchema(record, false),
+                  recordView.getView(record, false));
           s3outWrapper.write(bytes);
           s3outWrapper.write(lineSeparatorBytes);
         } catch (IOException e) {

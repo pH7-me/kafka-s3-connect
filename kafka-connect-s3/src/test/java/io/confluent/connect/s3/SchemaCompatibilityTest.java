@@ -15,6 +15,14 @@
 
 package io.confluent.connect.s3;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import io.confluent.connect.storage.schema.StorageSchemaCompatibility;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.SchemaProjectorException;
@@ -22,16 +30,6 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.HashMap;
-import java.util.Map;
-
-import io.confluent.connect.storage.schema.StorageSchemaCompatibility;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class SchemaCompatibilityTest extends S3SinkConnectorTestBase {
 
@@ -74,12 +72,14 @@ public class SchemaCompatibilityTest extends S3SinkConnectorTestBase {
   public void testCompatibilityModes() throws Exception {
     setUp();
 
-    for(Map.Entry<String, StorageSchemaCompatibility> expected : validModes.entrySet()) {
-      assertEquals(expected.getValue(), StorageSchemaCompatibility.getCompatibility(expected.getKey()));
+    for (Map.Entry<String, StorageSchemaCompatibility> expected : validModes.entrySet()) {
+      assertEquals(
+          expected.getValue(), StorageSchemaCompatibility.getCompatibility(expected.getKey()));
     }
     assertEquals(validModes.size(), StorageSchemaCompatibility.values().length);
 
-    assertEquals(StorageSchemaCompatibility.NONE, StorageSchemaCompatibility.getCompatibility(null));
+    assertEquals(
+        StorageSchemaCompatibility.NONE, StorageSchemaCompatibility.getCompatibility(null));
   }
 
   @Test
@@ -87,11 +87,15 @@ public class SchemaCompatibilityTest extends S3SinkConnectorTestBase {
     setUp();
 
     for (StorageSchemaCompatibility mode : validModes.values()) {
-      SinkRecord sinkRecord = new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schema, record, 16);
-      SinkRecord newSinkRecord = new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schema, record, 16);
+      SinkRecord sinkRecord =
+          new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schema, record, 16);
+      SinkRecord newSinkRecord =
+          new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schema, record, 16);
       SinkRecord sinkRecordNoVersion =
-          new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schemaNoVersion, recordNoVersion, 16);
-      SinkRecord sinkRecordNoSchema = new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, null, record, 16);
+          new SinkRecord(
+              TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schemaNoVersion, recordNoVersion, 16);
+      SinkRecord sinkRecordNoSchema =
+          new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, null, record, 16);
 
       // Test when both schemas are null
       assertFalse(mode.shouldChangeSchema(sinkRecordNoSchema, null, null));
@@ -121,7 +125,9 @@ public class SchemaCompatibilityTest extends S3SinkConnectorTestBase {
           break;
         case NONE:
           assertTrue(mode.shouldChangeSchema(sinkRecordNoVersion, null, sinkRecord.valueSchema()));
-          assertFalse(mode.shouldChangeSchema(sinkRecordNoVersion, null, sinkRecordNoVersion.valueSchema()));
+          assertFalse(
+              mode.shouldChangeSchema(
+                  sinkRecordNoVersion, null, sinkRecordNoVersion.valueSchema()));
       }
     }
   }
@@ -131,11 +137,15 @@ public class SchemaCompatibilityTest extends S3SinkConnectorTestBase {
     setUp();
 
     for (StorageSchemaCompatibility mode : validModes.values()) {
-      SinkRecord sinkRecord = new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schema, record, 16);
-      SinkRecord newSinkRecord = new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, newSchema, newRecord, 16);
+      SinkRecord sinkRecord =
+          new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schema, record, 16);
+      SinkRecord newSinkRecord =
+          new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, newSchema, newRecord, 16);
       SinkRecord sinkRecordNoVersion =
-          new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schemaNoVersion, recordNoVersion, 16);
-      SinkRecord sinkRecordNoSchema = new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, null, record, 16);
+          new SinkRecord(
+              TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schemaNoVersion, recordNoVersion, 16);
+      SinkRecord sinkRecordNoSchema =
+          new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, null, record, 16);
 
       // Test when one of the schema versions is null
       switch (mode) {
@@ -168,4 +178,3 @@ public class SchemaCompatibilityTest extends S3SinkConnectorTestBase {
     }
   }
 }
-

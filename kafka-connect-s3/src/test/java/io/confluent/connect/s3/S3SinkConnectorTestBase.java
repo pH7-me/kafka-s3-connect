@@ -28,6 +28,8 @@ import io.confluent.connect.storage.common.StorageCommonConfig;
 import io.confluent.connect.storage.partitioner.PartitionerConfig;
 import io.confluent.connect.storage.schema.SchemaCompatibility;
 import io.confluent.connect.storage.schema.StorageSchemaCompatibility;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.rules.TestRule;
@@ -36,9 +38,6 @@ import org.junit.runner.Description;
 import org.powermock.api.mockito.PowerMockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class S3SinkConnectorTestBase extends StorageSinkTestBase {
 
@@ -54,26 +53,29 @@ public class S3SinkConnectorTestBase extends StorageSinkTestBase {
   protected SchemaCompatibility compatibility;
 
   @Rule
-  public TestRule watcher = new TestWatcher() {
-    @Override
-    protected void starting(Description description) {
-      log.info(
-          "Starting test: {}.{}",
-          description.getTestClass().getSimpleName(),
-          description.getMethodName()
-      );
-    }
-  };
+  public TestRule watcher =
+      new TestWatcher() {
+        @Override
+        protected void starting(Description description) {
+          log.info(
+              "Starting test: {}.{}",
+              description.getTestClass().getSimpleName(),
+              description.getMethodName());
+        }
+      };
 
   @Override
   protected Map<String, String> createProps() {
     url = S3_TEST_URL;
     Map<String, String> props = super.createProps();
-    props.put(StorageCommonConfig.STORAGE_CLASS_CONFIG, "io.confluent.connect.s3.storage.S3Storage");
+    props.put(
+        StorageCommonConfig.STORAGE_CLASS_CONFIG, "io.confluent.connect.s3.storage.S3Storage");
     props.put(S3SinkConnectorConfig.S3_BUCKET_CONFIG, S3_TEST_BUCKET_NAME);
     props.put(S3SinkConnectorConfig.FORMAT_CLASS_CONFIG, AvroFormat.class.getName());
     props.put(S3SinkConnectorConfig.S3_PATH_STYLE_ACCESS_ENABLED_CONFIG, "false");
-    props.put(PartitionerConfig.PARTITIONER_CLASS_CONFIG, PartitionerConfig.PARTITIONER_CLASS_DEFAULT.getName());
+    props.put(
+        PartitionerConfig.PARTITIONER_CLASS_CONFIG,
+        PartitionerConfig.PARTITIONER_CLASS_DEFAULT.getName());
     props.put(PartitionerConfig.PARTITION_FIELD_NAME_CONFIG, "int");
     props.put(PartitionerConfig.PATH_FORMAT_CONFIG, "'year'=YYYY_'month'=MM_'day'=dd_'hour'=HH");
     props.put(PartitionerConfig.LOCALE_CONFIG, "en");
@@ -81,7 +83,7 @@ public class S3SinkConnectorTestBase extends StorageSinkTestBase {
     return props;
   }
 
-  //@Before
+  // @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -89,7 +91,9 @@ public class S3SinkConnectorTestBase extends StorageSinkTestBase {
     PowerMockito.doReturn(1024).when(connectorConfig).getPartSize();
     topicsDir = connectorConfig.getString(StorageCommonConfig.TOPICS_DIR_CONFIG);
     parsedConfig = new HashMap<>(connectorConfig.plainValues());
-    compatibility = StorageSchemaCompatibility.getCompatibility(StorageSinkConnectorConfig.SCHEMA_COMPATIBILITY_CONFIG);
+    compatibility =
+        StorageSchemaCompatibility.getCompatibility(
+            StorageSinkConnectorConfig.SCHEMA_COMPATIBILITY_CONFIG);
   }
 
   @After
@@ -99,17 +103,19 @@ public class S3SinkConnectorTestBase extends StorageSinkTestBase {
   }
 
   public AmazonS3 newS3Client(S3SinkConnectorConfig config) {
-    AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard()
-               .withAccelerateModeEnabled(config.getBoolean(S3SinkConnectorConfig.WAN_MODE_CONFIG))
-               .withPathStyleAccessEnabled(config.getBoolean(S3SinkConnectorConfig.S3_PATH_STYLE_ACCESS_ENABLED_CONFIG))
-               .withCredentials(new DefaultAWSCredentialsProviderChain());
+    AmazonS3ClientBuilder builder =
+        AmazonS3ClientBuilder.standard()
+            .withAccelerateModeEnabled(config.getBoolean(S3SinkConnectorConfig.WAN_MODE_CONFIG))
+            .withPathStyleAccessEnabled(
+                config.getBoolean(S3SinkConnectorConfig.S3_PATH_STYLE_ACCESS_ENABLED_CONFIG))
+            .withCredentials(new DefaultAWSCredentialsProviderChain());
 
-    builder = url == null ?
-                  builder.withRegion(config.getString(S3SinkConnectorConfig.REGION_CONFIG)) :
-                  builder.withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(url, ""));
+    builder =
+        url == null
+            ? builder.withRegion(config.getString(S3SinkConnectorConfig.REGION_CONFIG))
+            : builder.withEndpointConfiguration(
+                new AwsClientBuilder.EndpointConfiguration(url, ""));
 
     return builder.build();
   }
-
 }
-

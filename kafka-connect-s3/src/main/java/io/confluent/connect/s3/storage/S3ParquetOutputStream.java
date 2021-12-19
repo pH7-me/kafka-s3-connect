@@ -18,7 +18,6 @@ package io.confluent.connect.s3.storage;
 
 import com.amazonaws.services.s3.AmazonS3;
 import io.confluent.connect.s3.S3SinkConnectorConfig;
-
 import java.io.IOException;
 
 public class S3ParquetOutputStream extends S3OutputStream {

@@ -29,8 +29,8 @@ public class Utils {
    * @param initialExtension the file extension without the appended view extension, eg. .avro
    * @return the filename with the view extension appended, eg. file1.keys.avro
    */
-  public static String getAdjustedFilename(RecordView recordView, String filename,
-      String initialExtension) {
+  public static String getAdjustedFilename(
+      RecordView recordView, String filename, String initialExtension) {
     if (filename.endsWith(initialExtension)) {
       int index = filename.lastIndexOf(initialExtension);
       return filename.substring(0, index) + recordView.getExtension() + initialExtension;
@@ -39,5 +39,4 @@ public class Utils {
       return filename + recordView.getExtension() + initialExtension;
     }
   }
-
 }

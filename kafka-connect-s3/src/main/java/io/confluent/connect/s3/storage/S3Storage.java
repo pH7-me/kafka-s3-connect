@@ -15,6 +15,15 @@
 
 package io.confluent.connect.s3.storage;
 
+import static io.confluent.connect.s3.S3SinkConnectorConfig.AWS_ACCESS_KEY_ID_CONFIG;
+import static io.confluent.connect.s3.S3SinkConnectorConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
+import static io.confluent.connect.s3.S3SinkConnectorConfig.REGION_CONFIG;
+import static io.confluent.connect.s3.S3SinkConnectorConfig.S3_PATH_STYLE_ACCESS_ENABLED_CONFIG;
+import static io.confluent.connect.s3.S3SinkConnectorConfig.S3_PROXY_URL_CONFIG;
+import static io.confluent.connect.s3.S3SinkConnectorConfig.S3_RETRY_BACKOFF_CONFIG;
+import static io.confluent.connect.s3.S3SinkConnectorConfig.S3_RETRY_MAX_BACKOFF_TIME_MS;
+import static io.confluent.connect.s3.S3SinkConnectorConfig.WAN_MODE_CONFIG;
+
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.PredefinedClientConfigurations;
 import com.amazonaws.SdkClientException;
@@ -32,33 +41,20 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectTagging;
 import com.amazonaws.services.s3.model.SetObjectTaggingRequest;
 import com.amazonaws.services.s3.model.Tag;
-import org.apache.avro.file.SeekableInput;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.OutputStream;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import io.confluent.connect.s3.S3SinkConnectorConfig;
 import io.confluent.connect.s3.format.parquet.ParquetFormat;
 import io.confluent.connect.s3.util.S3ProxyConfig;
 import io.confluent.connect.s3.util.Version;
 import io.confluent.connect.storage.Storage;
 import io.confluent.connect.storage.common.util.StringUtils;
+import java.io.OutputStream;
+import java.util.Map;
+import java.util.stream.Collectors;
+import org.apache.avro.file.SeekableInput;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static io.confluent.connect.s3.S3SinkConnectorConfig.AWS_ACCESS_KEY_ID_CONFIG;
-import static io.confluent.connect.s3.S3SinkConnectorConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
-import static io.confluent.connect.s3.S3SinkConnectorConfig.REGION_CONFIG;
-import static io.confluent.connect.s3.S3SinkConnectorConfig.S3_PATH_STYLE_ACCESS_ENABLED_CONFIG;
-import static io.confluent.connect.s3.S3SinkConnectorConfig.S3_PROXY_URL_CONFIG;
-import static io.confluent.connect.s3.S3SinkConnectorConfig.S3_RETRY_BACKOFF_CONFIG;
-import static io.confluent.connect.s3.S3SinkConnectorConfig.S3_RETRY_MAX_BACKOFF_TIME_MS;
-import static io.confluent.connect.s3.S3SinkConnectorConfig.WAN_MODE_CONFIG;
-
-/**
- * S3 implementation of the storage interface for Connect sinks.
- */
+/** S3 implementation of the storage interface for Connect sinks. */
 public class S3Storage implements Storage<S3SinkConnectorConfig, ObjectListing> {
 
   private static final Logger log = LoggerFactory.getLogger(S3Storage.class);
@@ -83,29 +79,30 @@ public class S3Storage implements Storage<S3SinkConnectorConfig, ObjectListing> 
   }
 
   /**
-   * Creates and configures S3 client.
-   * Visible for testing.
+   * Creates and configures S3 client. Visible for testing.
    *
    * @param config the S3 configuration.
    * @return S3 client
    */
   public AmazonS3 newS3Client(S3SinkConnectorConfig config) {
     ClientConfiguration clientConfiguration = newClientConfiguration(config);
-    AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard()
-        .withAccelerateModeEnabled(config.getBoolean(WAN_MODE_CONFIG))
-        .withPathStyleAccessEnabled(config.getBoolean(S3_PATH_STYLE_ACCESS_ENABLED_CONFIG))
-        .withCredentials(newCredentialsProvider(config))
-        .withClientConfiguration(clientConfiguration);
+    AmazonS3ClientBuilder builder =
+        AmazonS3ClientBuilder.standard()
+            .withAccelerateModeEnabled(config.getBoolean(WAN_MODE_CONFIG))
+            .withPathStyleAccessEnabled(config.getBoolean(S3_PATH_STYLE_ACCESS_ENABLED_CONFIG))
+            .withCredentials(newCredentialsProvider(config))
+            .withClientConfiguration(clientConfiguration);
 
     String region = config.getString(REGION_CONFIG);
     if (StringUtils.isBlank(url)) {
-      builder = "us-east-1".equals(region)
-                ? builder.withRegion(Regions.US_EAST_1)
-                : builder.withRegion(region);
+      builder =
+          "us-east-1".equals(region)
+              ? builder.withRegion(Regions.US_EAST_1)
+              : builder.withRegion(region);
     } else {
-      builder = builder.withEndpointConfiguration(
-          new AwsClientBuilder.EndpointConfiguration(url, region)
-      );
+      builder =
+          builder.withEndpointConfiguration(
+              new AwsClientBuilder.EndpointConfiguration(url, region));
     }
 
     return builder.build();
@@ -120,9 +117,8 @@ public class S3Storage implements Storage<S3SinkConnectorConfig, ObjectListing> 
   }
 
   /**
-   * Creates S3 client's configuration.
-   * This method currently configures the AWS client retry policy to use full jitter.
-   * Visible for testing.
+   * Creates S3 client's configuration. This method currently configures the AWS client retry policy
+   * to use full jitter. Visible for testing.
    *
    * @param config the S3 configuration.
    * @return S3 client's configuration
@@ -131,11 +127,13 @@ public class S3Storage implements Storage<S3SinkConnectorConfig, ObjectListing> 
     String version = String.format(VERSION_FORMAT, Version.getVersion());
 
     ClientConfiguration clientConfiguration = PredefinedClientConfigurations.defaultConfig();
-    clientConfiguration.withUserAgentPrefix(version)
+    clientConfiguration
+        .withUserAgentPrefix(version)
         .withRetryPolicy(newFullJitterRetryPolicy(config));
     if (StringUtils.isNotBlank(config.getString(S3_PROXY_URL_CONFIG))) {
       S3ProxyConfig proxyConfig = new S3ProxyConfig(config);
-      clientConfiguration.withProtocol(proxyConfig.protocol())
+      clientConfiguration
+          .withProtocol(proxyConfig.protocol())
           .withProxyHost(proxyConfig.host())
           .withProxyPort(proxyConfig.port())
           .withProxyUsername(proxyConfig.user())
@@ -146,10 +144,8 @@ public class S3Storage implements Storage<S3SinkConnectorConfig, ObjectListing> 
     return clientConfiguration;
   }
 
-
   /**
-   * Creates a retry policy, based on full jitter backoff strategy
-   * and default retry condition.
+   * Creates a retry policy, based on full jitter backoff strategy and default retry condition.
    * Visible for testing.
    *
    * @param config the S3 configuration.
@@ -160,16 +156,14 @@ public class S3Storage implements Storage<S3SinkConnectorConfig, ObjectListing> 
   protected RetryPolicy newFullJitterRetryPolicy(S3SinkConnectorConfig config) {
     PredefinedBackoffStrategies.FullJitterBackoffStrategy backoffStrategy =
         new PredefinedBackoffStrategies.FullJitterBackoffStrategy(
-            config.getLong(S3_RETRY_BACKOFF_CONFIG).intValue(),
-            S3_RETRY_MAX_BACKOFF_TIME_MS
-        );
+            config.getLong(S3_RETRY_BACKOFF_CONFIG).intValue(), S3_RETRY_MAX_BACKOFF_TIME_MS);
 
-    RetryPolicy retryPolicy = new RetryPolicy(
-        PredefinedRetryPolicies.DEFAULT_RETRY_CONDITION,
-        backoffStrategy,
-        conf.getS3PartRetries(),
-        false
-    );
+    RetryPolicy retryPolicy =
+        new RetryPolicy(
+            PredefinedRetryPolicies.DEFAULT_RETRY_CONDITION,
+            backoffStrategy,
+            conf.getS3PartRetries(),
+            false);
     return retryPolicy;
   }
 
@@ -177,9 +171,10 @@ public class S3Storage implements Storage<S3SinkConnectorConfig, ObjectListing> 
     final String accessKeyId = config.getString(AWS_ACCESS_KEY_ID_CONFIG);
     final String secretKey = config.getPassword(AWS_SECRET_ACCESS_KEY_CONFIG).value();
     if (StringUtils.isNotBlank(accessKeyId) && StringUtils.isNotBlank(secretKey)) {
-      log.info("Returning new credentials provider using the access key id and "
-          + "the secret access key that were directly supplied through the connector's "
-          + "configuration");
+      log.info(
+          "Returning new credentials provider using the access key id and "
+              + "the secret access key that were directly supplied through the connector's "
+              + "configuration");
       BasicAWSCredentials basicCredentials = new BasicAWSCredentials(accessKeyId, secretKey);
       return new AWSStaticCredentialsProvider(basicCredentials);
     }
@@ -210,8 +205,7 @@ public class S3Storage implements Storage<S3SinkConnectorConfig, ObjectListing> 
   public S3OutputStream create(String path, boolean overwrite, Class<?> formatClass) {
     if (!overwrite) {
       throw new UnsupportedOperationException(
-          "Creating a file without overwriting is not currently supported in S3 Connector"
-      );
+          "Creating a file without overwriting is not currently supported in S3 Connector");
     }
 
     if (StringUtils.isBlank(path)) {
@@ -246,9 +240,11 @@ public class S3Storage implements Storage<S3SinkConnectorConfig, ObjectListing> 
   public void close() {}
 
   public void addTags(String fileName, Map<String, String> tags) throws SdkClientException {
-    ObjectTagging objectTagging = new ObjectTagging(tags.entrySet().stream()
-        .map(e -> new Tag(e.getKey(), e.getValue()))
-        .collect(Collectors.toList()));
+    ObjectTagging objectTagging =
+        new ObjectTagging(
+            tags.entrySet().stream()
+                .map(e -> new Tag(e.getKey(), e.getValue()))
+                .collect(Collectors.toList()));
     s3.setObjectTagging(new SetObjectTaggingRequest(this.bucketName, fileName, objectTagging));
   }
 
@@ -270,7 +266,6 @@ public class S3Storage implements Storage<S3SinkConnectorConfig, ObjectListing> 
   @Override
   public SeekableInput open(String path, S3SinkConnectorConfig conf) {
     throw new UnsupportedOperationException(
-        "File reading is not currently supported in S3 Connector"
-    );
+        "File reading is not currently supported in S3 Connector");
   }
 }

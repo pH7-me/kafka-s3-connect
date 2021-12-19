@@ -21,16 +21,15 @@ package io.confluent.connect.s3.partitioner;
 
 import io.confluent.connect.storage.errors.PartitionException;
 import io.confluent.connect.storage.partitioner.DefaultPartitioner;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import org.apache.kafka.common.utils.Utils;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
 public class MultiFieldPartitioner<T> extends DefaultPartitioner<T> {
   private static final Logger log =

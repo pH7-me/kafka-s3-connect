@@ -13,11 +13,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package  io.confluent.connect.s3.format.json;
+package io.confluent.connect.s3.format.json;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;

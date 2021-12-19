@@ -1,6 +1,14 @@
 package io.confluent.connect.s3.format;
 
+import static io.confluent.connect.s3.format.RecordViews.HeaderRecordView.SINGLE_HEADER_SCHEMA;
+import static org.junit.Assert.assertEquals;
+
+import io.confluent.connect.s3.format.RecordViews.HeaderRecordView;
+import io.confluent.connect.s3.format.RecordViews.KeyRecordView;
+import io.confluent.connect.s3.format.RecordViews.ValueRecordView;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
@@ -10,16 +18,6 @@ import org.apache.kafka.connect.header.ConnectHeaders;
 import org.apache.kafka.connect.header.Headers;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.Test;
-
-import java.util.Arrays;
-import java.util.List;
-
-import io.confluent.connect.s3.format.RecordViews.HeaderRecordView;
-import io.confluent.connect.s3.format.RecordViews.KeyRecordView;
-import io.confluent.connect.s3.format.RecordViews.ValueRecordView;
-
-import static io.confluent.connect.s3.format.RecordViews.HeaderRecordView.SINGLE_HEADER_SCHEMA;
-import static org.junit.Assert.assertEquals;
 
 public class RecordViewsTest {
 
@@ -43,35 +41,43 @@ public class RecordViewsTest {
     assertEquals(sampleRecord.key(), new KeyRecordView().getView(sampleRecord, false));
     assertEquals(sampleRecord.value(), new ValueRecordView().getView(sampleRecord, false));
     assertEquals(sampleRecord.keySchema(), new KeyRecordView().getViewSchema(sampleRecord, false));
-    assertEquals(sampleRecord.valueSchema(), new ValueRecordView().getViewSchema(sampleRecord, false));
+    assertEquals(
+        sampleRecord.valueSchema(), new ValueRecordView().getViewSchema(sampleRecord, false));
   }
 
   @Test
   public void testHeaderConvertsToString() {
-    List<Struct> expectedHeaders = Arrays.asList(
-        new Struct(SINGLE_HEADER_SCHEMA)
-            .put("key", "string").put("value", "string"),
-        new Struct(SINGLE_HEADER_SCHEMA).put("key", "int").put("value", "12"),
-        new Struct(SINGLE_HEADER_SCHEMA).put("key", "boolean").put("value", "false"));
+    List<Struct> expectedHeaders =
+        Arrays.asList(
+            new Struct(SINGLE_HEADER_SCHEMA).put("key", "string").put("value", "string"),
+            new Struct(SINGLE_HEADER_SCHEMA).put("key", "int").put("value", "12"),
+            new Struct(SINGLE_HEADER_SCHEMA).put("key", "boolean").put("value", "false"));
 
     Object headerView = new HeaderRecordView().getView(getSampleSinkRecord(), false);
     assertEquals(expectedHeaders, headerView);
   }
 
   private SinkRecord getSampleSinkRecord() {
-    Headers headers = new ConnectHeaders()
-        .addString("string", "string")
-        .addInt("int", 12)
-        .addBoolean("boolean", false);
+    Headers headers =
+        new ConnectHeaders()
+            .addString("string", "string")
+            .addInt("int", 12)
+            .addBoolean("boolean", false);
 
     Schema keyschema = getExampleKeyStructSchema();
     Schema valueschema = getExampleValueStructSchema();
 
     return new SinkRecord(
-        "topic", 0,
-        keyschema, getExampleKeyStruct(keyschema),
-        valueschema, getExampleValueStruct(valueschema),
-        0, 0L, TimestampType.NO_TIMESTAMP_TYPE, headers);
+        "topic",
+        0,
+        keyschema,
+        getExampleKeyStruct(keyschema),
+        valueschema,
+        getExampleValueStruct(valueschema),
+        0,
+        0L,
+        TimestampType.NO_TIMESTAMP_TYPE,
+        headers);
   }
 
   private Schema getExampleKeyStructSchema() {

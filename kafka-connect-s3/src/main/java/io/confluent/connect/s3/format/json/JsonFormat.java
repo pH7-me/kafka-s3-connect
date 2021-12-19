@@ -15,16 +15,14 @@
 
 package io.confluent.connect.s3.format.json;
 
-import org.apache.kafka.connect.json.JsonConverter;
-
-import java.util.HashMap;
-import java.util.Map;
-
 import io.confluent.connect.s3.S3SinkConnectorConfig;
 import io.confluent.connect.s3.storage.S3Storage;
 import io.confluent.connect.storage.format.Format;
 import io.confluent.connect.storage.format.RecordWriterProvider;
 import io.confluent.connect.storage.format.SchemaFileReader;
+import java.util.HashMap;
+import java.util.Map;
+import org.apache.kafka.connect.json.JsonConverter;
 
 public class JsonFormat implements Format<S3SinkConnectorConfig, String> {
   private final S3Storage storage;
@@ -37,8 +35,7 @@ public class JsonFormat implements Format<S3SinkConnectorConfig, String> {
     converterConfig.put("schemas.enable", "false");
     converterConfig.put(
         "schemas.cache.size",
-        String.valueOf(storage.conf().get(S3SinkConnectorConfig.SCHEMA_CACHE_SIZE_CONFIG))
-    );
+        String.valueOf(storage.conf().get(S3SinkConnectorConfig.SCHEMA_CACHE_SIZE_CONFIG)));
     this.converter.configure(converterConfig, false);
   }
 
@@ -56,8 +53,6 @@ public class JsonFormat implements Format<S3SinkConnectorConfig, String> {
   @Deprecated
   public Object getHiveFactory() {
     throw new UnsupportedOperationException(
-        "Hive integration is not currently supported in S3 Connector"
-    );
+        "Hive integration is not currently supported in S3 Connector");
   }
-
 }

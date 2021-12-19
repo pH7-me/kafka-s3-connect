@@ -15,12 +15,12 @@
 
 package io.confluent.connect.s3.integration;
 
+import static io.confluent.connect.s3.S3SinkConnectorConfig.AWS_ACCESS_KEY_ID_CONFIG;
+import static io.confluent.connect.s3.S3SinkConnectorConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
 import static io.confluent.connect.s3.S3SinkConnectorConfig.BEHAVIOR_ON_NULL_VALUES_CONFIG;
 import static io.confluent.connect.s3.S3SinkConnectorConfig.S3_BUCKET_CONFIG;
 import static io.confluent.connect.s3.S3SinkConnectorConfig.STORE_KAFKA_HEADERS_CONFIG;
 import static io.confluent.connect.s3.S3SinkConnectorConfig.STORE_KAFKA_KEYS_CONFIG;
-import static io.confluent.connect.s3.S3SinkConnectorConfig.AWS_ACCESS_KEY_ID_CONFIG;
-import static io.confluent.connect.s3.S3SinkConnectorConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
 import static io.confluent.connect.storage.StorageSinkConnectorConfig.FLUSH_SIZE_CONFIG;
 import static io.confluent.connect.storage.StorageSinkConnectorConfig.FORMAT_CLASS_CONFIG;
 import static org.apache.kafka.connect.runtime.ConnectorConfig.CONNECTOR_CLASS_CONFIG;
@@ -40,7 +40,6 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-
 import io.confluent.connect.s3.S3SinkConnector;
 import io.confluent.connect.s3.S3SinkConnectorConfig.BehaviorOnNullValues;
 import io.confluent.connect.s3.format.avro.AvroFormat;
@@ -77,13 +76,13 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.common.header.Header;
 import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.runtime.SinkConnectorConfig;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -126,7 +125,8 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
   private static final String DLQ_TOPIC_CONFIG = "errors.deadletterqueue.topic.name";
   private static final String DLQ_TOPIC_NAME = "DLQ-topic";
 
-  private static final List<String> KAFKA_TOPICS = Collections.singletonList(DEFAULT_TEST_TOPIC_NAME);
+  private static final List<String> KAFKA_TOPICS =
+      Collections.singletonList(DEFAULT_TEST_TOPIC_NAME);
   private static final long CONSUME_MAX_DURATION_MS = TimeUnit.SECONDS.toMillis(10);
   private static final int NUM_RECORDS_INSERT = 30;
   private static final int FLUSH_SIZE_STANDARD = 3;
@@ -137,8 +137,7 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
       ImmutableMap.of(
           JSON_EXTENSION, S3SinkConnectorIT::getContentsFromJson,
           AVRO_EXTENSION, S3SinkConnectorIT::getContentsFromAvro,
-          PARQUET_EXTENSION, S3SinkConnectorIT::getContentsFromParquet
-      );
+          PARQUET_EXTENSION, S3SinkConnectorIT::getContentsFromParquet);
 
   private JsonConverter jsonConverter;
   // custom producer to enable sending records with headers
@@ -166,7 +165,7 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
     initializeJsonConverter();
     initializeCustomProducer();
     setupProperties();
-    //add class specific props
+    // add class specific props
     props.put(SinkConnectorConfig.TOPICS_CONFIG, String.join(",", KAFKA_TOPICS));
     props.put(FLUSH_SIZE_CONFIG, Integer.toString(FLUSH_SIZE_STANDARD));
     props.put(FORMAT_CLASS_CONFIG, AvroFormat.class.getName());
@@ -188,59 +187,58 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
 
   @Test
   public void testBasicRecordsWrittenAvro() throws Throwable {
-    //add test specific props
+    // add test specific props
     props.put(FORMAT_CLASS_CONFIG, AvroFormat.class.getName());
     testBasicRecordsWritten(AVRO_EXTENSION, false);
   }
 
   @Test
   public void testBasicRecordsWrittenParquet() throws Throwable {
-    //add test specific props
+    // add test specific props
     props.put(FORMAT_CLASS_CONFIG, ParquetFormat.class.getName());
     testBasicRecordsWritten(PARQUET_EXTENSION, false);
   }
 
   @Test
   public void testBasicRecordsWrittenJson() throws Throwable {
-    //add test specific props
+    // add test specific props
     props.put(FORMAT_CLASS_CONFIG, JsonFormat.class.getName());
     testBasicRecordsWritten(JSON_EXTENSION, false);
   }
 
   @Test
   public void testFilesWrittenToBucketAvroWithExtInTopic() throws Throwable {
-    //add test specific props
+    // add test specific props
     props.put(FORMAT_CLASS_CONFIG, AvroFormat.class.getName());
     testBasicRecordsWritten(AVRO_EXTENSION, true);
   }
 
   @Test
   public void testFilesWrittenToBucketParquetWithExtInTopic() throws Throwable {
-    //add test specific props
+    // add test specific props
     props.put(FORMAT_CLASS_CONFIG, ParquetFormat.class.getName());
     testBasicRecordsWritten(PARQUET_EXTENSION, true);
   }
 
   @Test
   public void testFilesWrittenToBucketJsonWithExtInTopic() throws Throwable {
-    //add test specific props
+    // add test specific props
     props.put(FORMAT_CLASS_CONFIG, JsonFormat.class.getName());
     testBasicRecordsWritten(JSON_EXTENSION, true);
   }
 
   /**
-   * Test that the expected records are written for a given file extension
-   * Optionally, test that topics which have "*.{expectedFileExtension}*" in them are processed
-   * and written.
+   * Test that the expected records are written for a given file extension Optionally, test that
+   * topics which have "*.{expectedFileExtension}*" in them are processed and written.
+   *
    * @param expectedFileExtension The file extension to test against
    * @param addExtensionInTopic Add a topic to to the test which contains the extension
    * @throws Throwable
    */
-  private void testBasicRecordsWritten(
-          String expectedFileExtension,
-          boolean addExtensionInTopic
-  ) throws Throwable {
-    final String topicNameWithExt = "other." + expectedFileExtension + ".topic." + expectedFileExtension;
+  private void testBasicRecordsWritten(String expectedFileExtension, boolean addExtensionInTopic)
+      throws Throwable {
+    final String topicNameWithExt =
+        "other." + expectedFileExtension + ".topic." + expectedFileExtension;
 
     // Add an extra topic with this extension inside of the name
     // Use a TreeSet for test determinism
@@ -249,10 +247,7 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
     if (addExtensionInTopic) {
       topicNames.add(topicNameWithExt);
       connect.kafka().createTopic(topicNameWithExt, 1);
-      props.replace(
-              "topics",
-              props.get("topics") + "," + topicNameWithExt
-      );
+      props.replace("topics", props.get("topics") + "," + topicNameWithExt);
     }
 
     // start sink connector
@@ -265,7 +260,8 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
 
     for (String thisTopicName : topicNames) {
       // Create and send records to Kafka using the topic name in the current 'thisTopicName'
-      SinkRecord sampleRecord = getSampleTopicRecord(thisTopicName, recordValueSchema, recordValueStruct);
+      SinkRecord sampleRecord =
+          getSampleTopicRecord(thisTopicName, recordValueSchema, recordValueStruct);
       produceRecordsNoHeaders(NUM_RECORDS_INSERT, sampleRecord);
     }
 
@@ -276,13 +272,13 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
 
     Set<String> expectedTopicFilenames = new TreeSet<>();
     for (String thisTopicName : topicNames) {
-      List<String> theseFiles = getExpectedFilenames(
+      List<String> theseFiles =
+          getExpectedFilenames(
               thisTopicName,
               TOPIC_PARTITION,
               FLUSH_SIZE_STANDARD,
               NUM_RECORDS_INSERT,
-              expectedFileExtension
-      );
+              expectedFileExtension);
       assertEquals(theseFiles.size(), countPerTopic);
       expectedTopicFilenames.addAll(theseFiles);
     }
@@ -340,11 +336,11 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
     int expectedDLQRecordCount = 3;
     ConsumerRecords<byte[], byte[]> dlqRecords =
         connect.kafka().consume(expectedDLQRecordCount, CONSUME_MAX_DURATION_MS, DLQ_TOPIC_NAME);
-    List<String> expectedErrors = Arrays.asList(
-        "Key cannot be null for SinkRecord",
-        "Skipping null value record",
-        "Headers cannot be null for SinkRecord"
-    );
+    List<String> expectedErrors =
+        Arrays.asList(
+            "Key cannot be null for SinkRecord",
+            "Skipping null value record",
+            "Headers cannot be null for SinkRecord");
 
     assertEquals(expectedDLQRecordCount, dlqRecords.count());
     assertDLQRecordMessages(expectedErrors, dlqRecords);
@@ -354,17 +350,16 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
   /**
    * Verify the error messages in the DLQ record headers.
    *
-   * @param expectedMessages    the expected list of error messages
-   * @param consumedDLQRecords  the records consumed from the DLQ topic
+   * @param expectedMessages the expected list of error messages
+   * @param consumedDLQRecords the records consumed from the DLQ topic
    */
   private void assertDLQRecordMessages(
-      List<String> expectedMessages,
-      ConsumerRecords<byte[], byte[]> consumedDLQRecords
-  ) {
+      List<String> expectedMessages, ConsumerRecords<byte[], byte[]> consumedDLQRecords) {
 
     List<String> actualMessages = new ArrayList<>();
     for (ConsumerRecord<byte[], byte[]> dlqRecord : consumedDLQRecords.records(DLQ_TOPIC_NAME)) {
-      Header r = dlqRecord.headers().headers("__connect.errors.exception.message").iterator().next();
+      Header r =
+          dlqRecord.headers().headers("__connect.errors.exception.message").iterator().next();
       String headerErrorMessage = new StringDeserializer().deserialize(DLQ_TOPIC_NAME, r.value());
       actualMessages.add(headerErrorMessage);
     }
@@ -383,15 +378,18 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
     produceRecords(record.topic(), recordCount, record, true, true, false);
   }
 
-  private void produceRecordsWithHeaders(String topic, int recordCount, SinkRecord record) throws Exception {
-   produceRecords(topic, recordCount, record, true, true, true);
+  private void produceRecordsWithHeaders(String topic, int recordCount, SinkRecord record)
+      throws Exception {
+    produceRecords(topic, recordCount, record, true, true, true);
   }
 
-  private void produceRecordsWithHeadersNoKey(String topic, int recordCount, SinkRecord record) throws Exception {
+  private void produceRecordsWithHeadersNoKey(String topic, int recordCount, SinkRecord record)
+      throws Exception {
     produceRecords(topic, recordCount, record, false, true, true);
   }
 
-  private void produceRecordsWithHeadersNoValue(String topic, int recordCount, SinkRecord record) throws Exception{
+  private void produceRecordsWithHeadersNoValue(String topic, int recordCount, SinkRecord record)
+      throws Exception {
     produceRecords(topic, recordCount, record, true, false, true);
   }
 
@@ -401,8 +399,8 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
       SinkRecord record,
       boolean withKey,
       boolean withValue,
-      boolean withHeaders
-  ) throws ExecutionException, InterruptedException {
+      boolean withHeaders)
+      throws ExecutionException, InterruptedException {
     byte[] kafkaKey = null;
     byte[] kafkaValue = null;
     Iterable<Header> headers = Collections.emptyList();
@@ -410,19 +408,21 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
       kafkaKey = jsonConverter.fromConnectData(topic, Schema.STRING_SCHEMA, record.key());
     }
     if (withValue) {
-     kafkaValue = jsonConverter.fromConnectData(record.topic(), record.valueSchema(), record.value());
+      kafkaValue =
+          jsonConverter.fromConnectData(record.topic(), record.valueSchema(), record.value());
     }
     if (withHeaders) {
       headers = sampleHeaders();
     }
-    ProducerRecord<byte[],byte[]> producerRecord =
+    ProducerRecord<byte[], byte[]> producerRecord =
         new ProducerRecord<>(topic, TOPIC_PARTITION, kafkaKey, kafkaValue, headers);
     for (long i = 0; i < recordCount; i++) {
       producer.send(producerRecord).get();
     }
   }
 
-  private SinkRecord getSampleTopicRecord(String topicName, Schema recordValueSchema, Struct recordValueStruct ) {
+  private SinkRecord getSampleTopicRecord(
+      String topicName, Schema recordValueSchema, Struct recordValueStruct) {
     return new SinkRecord(
         topicName,
         TOPIC_PARTITION,
@@ -430,19 +430,17 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
         "key",
         recordValueSchema,
         recordValueStruct,
-        DEFAULT_OFFSET
-    );
+        DEFAULT_OFFSET);
   }
 
-  private SinkRecord getSampleRecord(Schema recordValueSchema, Struct recordValueStruct ) {
+  private SinkRecord getSampleRecord(Schema recordValueSchema, Struct recordValueStruct) {
     return getSampleTopicRecord(DEFAULT_TEST_TOPIC_NAME, recordValueSchema, recordValueStruct);
   }
 
   private Iterable<Header> sampleHeaders() {
     return Arrays.asList(
         new RecordHeader("first-header-key", "first-header-value".getBytes()),
-        new RecordHeader("second-header-key", "second-header-value".getBytes())
-    );
+        new RecordHeader("second-header-key", "second-header-value".getBytes()));
   }
 
   private Schema getSampleStructSchema() {
@@ -474,19 +472,19 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
    * @return an authenticated S3 client
    */
   private static AmazonS3 getS3Client() {
-     Map<String, String> creds = getAWSCredentialFromPath();
-     // If AWS credentials found on AWS_CREDENTIALS_PATH, use them (Jenkins)
-     if (creds.size() == 2) {
-         BasicAWSCredentials awsCreds = new BasicAWSCredentials(
-             creds.get(AWS_ACCESS_KEY_ID_CONFIG),
-             creds.get(AWS_SECRET_ACCESS_KEY_CONFIG));
-         return AmazonS3ClientBuilder.standard()
-             .withCredentials(new AWSStaticCredentialsProvider(awsCreds))
-             .build();
-     }
-     // DefaultAWSCredentialsProviderChain,
-     // For local testing,  ~/.aws/credentials needs to be defined or other environment variables
-     return AmazonS3ClientBuilder.standard().withRegion(AWS_REGION).build();
+    Map<String, String> creds = getAWSCredentialFromPath();
+    // If AWS credentials found on AWS_CREDENTIALS_PATH, use them (Jenkins)
+    if (creds.size() == 2) {
+      BasicAWSCredentials awsCreds =
+          new BasicAWSCredentials(
+              creds.get(AWS_ACCESS_KEY_ID_CONFIG), creds.get(AWS_SECRET_ACCESS_KEY_CONFIG));
+      return AmazonS3ClientBuilder.standard()
+          .withCredentials(new AWSStaticCredentialsProvider(awsCreds))
+          .build();
+    }
+    // DefaultAWSCredentialsProviderChain,
+    // For local testing,  ~/.aws/credentials needs to be defined or other environment variables
+    return AmazonS3ClientBuilder.standard().withRegion(AWS_REGION).build();
   }
 
   /**
@@ -503,16 +501,13 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
   /**
    * Check the contents of the record value files in the S3 bucket compared to the expected row.
    *
-   * @param bucketName          the name of the s3 test bucket
+   * @param bucketName the name of the s3 test bucket
    * @param expectedRowsPerFile the number of rows a file should have
-   * @param expectedRow         the expected row data in each file
+   * @param expectedRow the expected row data in each file
    * @return whether every row of the files read equals the expected row
    */
   private boolean fileContentsAsExpected(
-      String bucketName,
-      int expectedRowsPerFile,
-      Struct expectedRow
-  ) {
+      String bucketName, int expectedRowsPerFile, Struct expectedRow) {
     log.info("expectedRow: {}", expectedRow);
     for (String fileName :
         getS3FileListValues(S3Client.listObjectsV2(bucketName).getObjectSummaries())) {
@@ -522,8 +517,8 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
       S3Client.getObject(new GetObjectRequest(bucketName, fileName), downloadedFile);
 
       String fileExtension = getExtensionFromKey(fileName);
-      List<JsonNode> downloadedFileContents = contentGetters.get(fileExtension)
-          .apply(destinationPath);
+      List<JsonNode> downloadedFileContents =
+          contentGetters.get(fileExtension).apply(destinationPath);
       if (!fileContentsMatchExpected(downloadedFileContents, expectedRowsPerFile, expectedRow)) {
         return false;
       }
@@ -535,19 +530,18 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
   /**
    * Check if the contents of a downloaded file match the expected row.
    *
-   * @param fileContents        the file contents as a list of JsonNodes
+   * @param fileContents the file contents as a list of JsonNodes
    * @param expectedRowsPerFile the number of rows expected in the file
-   * @param expectedRow         the expected values of each row
+   * @param expectedRow the expected values of each row
    * @return whether the file contents match the expected row
    */
   private boolean fileContentsMatchExpected(
-      List<JsonNode> fileContents,
-      int expectedRowsPerFile,
-      Struct expectedRow
-  ) {
+      List<JsonNode> fileContents, int expectedRowsPerFile, Struct expectedRow) {
     if (fileContents.size() != expectedRowsPerFile) {
-      log.error("Number of rows in file do not match the expected count, actual: {}, expected: {}",
-          fileContents.size(), expectedRowsPerFile);
+      log.error(
+          "Number of rows in file do not match the expected count, actual: {}, expected: {}",
+          fileContents.size(),
+          expectedRowsPerFile);
       return false;
     }
     for (JsonNode row : fileContents) {
@@ -561,7 +555,7 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
   /**
    * Compare the row in the file and its values to the expected row's values.
    *
-   * @param fileRow     the row read from the file as a JsonNode
+   * @param fileRow the row read from the file as a JsonNode
    * @param expectedRow the expected contents of the row
    * @return whether the file row matches the expected row
    */
@@ -588,8 +582,8 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
   private static List<JsonNode> getContentsFromAvro(String filePath) {
     try {
       DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-      DataFileReader<GenericRecord> dataFileReader = new DataFileReader(new File(filePath),
-          datumReader);
+      DataFileReader<GenericRecord> dataFileReader =
+          new DataFileReader(new File(filePath), datumReader);
       List<JsonNode> fileRows = new ArrayList<>();
       while (dataFileReader.hasNext()) {
         GenericRecord row = dataFileReader.next();
@@ -610,12 +604,12 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
    */
   private static List<JsonNode> getContentsFromParquet(String filePath) {
     try {
-      ParquetReader<SimpleRecord> reader = ParquetReader
-          .builder(new SimpleReadSupport(), new Path(filePath)).build();
-      ParquetMetadata metadata = ParquetFileReader
-          .readFooter(new Configuration(), new Path(filePath));
-      JsonRecordFormatter.JsonGroupFormatter formatter = JsonRecordFormatter
-          .fromSchema(metadata.getFileMetaData().getSchema());
+      ParquetReader<SimpleRecord> reader =
+          ParquetReader.builder(new SimpleReadSupport(), new Path(filePath)).build();
+      ParquetMetadata metadata =
+          ParquetFileReader.readFooter(new Configuration(), new Path(filePath));
+      JsonRecordFormatter.JsonGroupFormatter formatter =
+          JsonRecordFormatter.fromSchema(metadata.getFileMetaData().getSchema());
       List<JsonNode> fileRows = new ArrayList<>();
       for (SimpleRecord value = reader.read(); value != null; value = reader.read()) {
         JsonNode jsonNode = jsonMapper.readTree(formatter.formatRecord(value));
@@ -650,8 +644,8 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
 
   /**
    * Get the file extension from the S3 Object key
-   * <p>
-   * ex.: /topics/s3_topic/partition=97/s3_topic+97+0000000001.avro
+   *
+   * <p>ex.: /topics/s3_topic/partition=97/s3_topic+97+0000000001.avro
    *
    * @param s3FileKey the object file key
    * @return the extension, may be .avro, .json, or .snappy.parquet,
@@ -686,7 +680,7 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
 
   // whether a filename contains any of the extensions
   private boolean filenameContainsExtensions(String filename, List<String> extensions) {
-    for (String extension : extensions){
+    for (String extension : extensions) {
       if (filename.endsWith(extension)) {
         return true;
       }
@@ -706,9 +700,11 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
   private void initializeCustomProducer() {
     Map<String, Object> producerProps = new HashMap<>();
     producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, connect.kafka().bootstrapServers());
-    producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+    producerProps.put(
+        ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
         org.apache.kafka.common.serialization.ByteArraySerializer.class.getName());
-    producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+    producerProps.put(
+        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
         org.apache.kafka.common.serialization.ByteArraySerializer.class.getName());
     producer = new KafkaProducer<>(producerProps);
   }
@@ -726,26 +722,23 @@ public class S3SinkConnectorIT extends BaseConnectorIT {
 
   private static Map<String, String> getAWSCredentialFromPath() {
     Map<String, String> map = new HashMap<String, String>();
-    if  (!System.getenv().containsKey(AWS_CREDENTIALS_PATH)) {
-        return map;
+    if (!System.getenv().containsKey(AWS_CREDENTIALS_PATH)) {
+      return map;
     }
     String path = System.getenv().get(AWS_CREDENTIALS_PATH);
     try {
-        Map<String, String> creds = new ObjectMapper()
-            .readValue(new FileReader(path), Map.class);
-        String value = creds.get("aws_access_key_id");
-        if (value != null && !value.isEmpty()) {
-          map.put(AWS_ACCESS_KEY_ID_CONFIG, value);
-        }
-        value = creds.get("aws_secret_access_key");
-        if (value != null && !value.isEmpty()) {
-          map.put(AWS_SECRET_ACCESS_KEY_CONFIG,value);
-        }
+      Map<String, String> creds = new ObjectMapper().readValue(new FileReader(path), Map.class);
+      String value = creds.get("aws_access_key_id");
+      if (value != null && !value.isEmpty()) {
+        map.put(AWS_ACCESS_KEY_ID_CONFIG, value);
+      }
+      value = creds.get("aws_secret_access_key");
+      if (value != null && !value.isEmpty()) {
+        map.put(AWS_SECRET_ACCESS_KEY_CONFIG, value);
+      }
     } catch (Exception e) {
-        e.printStackTrace();
-        throw new IllegalArgumentException(
-                "AWS credentials file not found." + AWS_CREDENTIALS_PATH
-            );
+      e.printStackTrace();
+      throw new IllegalArgumentException("AWS credentials file not found." + AWS_CREDENTIALS_PATH);
     }
     return map;
   }
