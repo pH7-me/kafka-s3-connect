@@ -21,12 +21,14 @@ package io.confluent.connect.s3.partitioner;
 
 import io.confluent.connect.storage.errors.PartitionException;
 import io.confluent.connect.storage.partitioner.DefaultPartitioner;
+import io.confluent.connect.storage.util.DataUtils;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.apache.kafka.common.utils.Utils;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,37 +90,37 @@ public class MultiFieldPartitioner<T> extends DefaultPartitioner<T> {
 
   private String checkForMap(Object value) {
     if (value instanceof Map) {
-
-      Map struct = (Map) value;
+      Map<?, ?> map = (Map<?, ?>) value;
       StringBuilder builder = new StringBuilder();
-      Iterator var6 = this.fieldNames.iterator();
-
-      while (var6.hasNext()) {
-        String fieldName = (String) var6.next();
+      for (String fieldName : fieldNames) {
         if (builder.length() > 0) {
           builder.append(this.delim);
         }
-
-        Object partitionKey = struct.get(fieldName);
-        Schema.Type type = Schema.Type.STRING;
-        switch (type) {
-          case INT8:
-          case INT16:
-          case INT32:
-          case INT64:
-            Number record = (Number) partitionKey;
-            builder.append(fieldName.toLowerCase() + "=" + record.toString());
-            break;
-          case STRING:
-            builder.append(fieldName.toLowerCase() + "=" + (String) partitionKey);
-            break;
-          case BOOLEAN:
-            boolean booleanRecord = (Boolean) partitionKey;
-            builder.append(fieldName.toLowerCase() + "=" + Boolean.toString(booleanRecord));
-            break;
-          default:
-            log.error("Type {} is not supported as a partition key.", type.getName());
-            throw new PartitionException("Error encoding partition.");
+        Object fieldValue = "null";
+        try {
+          fieldValue = DataUtils.getNestedFieldValue(map, fieldName);
+        } catch (DataException e) {
+          log.warn(
+              "{} is unable to parse field - {} from record - {}",
+              this.getClass(),
+              fieldName,
+              value);
+        }
+        String[] nestedFieldList = fieldName.split("\\.");
+        String partitionName = nestedFieldList[nestedFieldList.length - 1];
+        if (fieldValue instanceof Number) {
+          Number record = (Number) fieldValue;
+          builder.append(partitionName + "=" + record.toString());
+        } else if (fieldValue instanceof String) {
+          builder.append(partitionName + "=" + (String) fieldValue);
+        } else if (fieldValue instanceof Boolean) {
+          boolean booleanRecord = (boolean) fieldValue;
+          builder.append(partitionName + "=" + Boolean.toString(booleanRecord));
+        } else {
+          log.error(
+              "Unsupported type '{}' for user-defined timestamp field.", fieldValue.getClass());
+          throw new PartitionException(
+              "Error extracting timestamp from record field: " + fieldName);
         }
       }
       return builder.toString();
