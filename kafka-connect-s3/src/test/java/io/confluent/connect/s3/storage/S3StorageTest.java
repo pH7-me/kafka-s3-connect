@@ -15,6 +15,12 @@
 
 package io.confluent.connect.s3.storage;
 
+import static io.confluent.connect.s3.S3SinkConnectorConfig.S3_RETRY_BACKOFF_CONFIG;
+import static io.confluent.connect.s3.S3SinkConnectorConfig.S3_RETRY_MAX_BACKOFF_TIME_MS;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentialsProvider;
@@ -22,27 +28,17 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.retry.PredefinedBackoffStrategies;
 import com.amazonaws.retry.PredefinedRetryPolicies;
 import com.amazonaws.retry.RetryPolicy;
-import org.apache.http.HttpStatus;
-import org.junit.Test;
-
-import java.util.HashMap;
-import java.util.Map;
-
 import io.confluent.connect.s3.DummyAssertiveCredentialsProvider;
 import io.confluent.connect.s3.S3SinkConnectorConfig;
 import io.confluent.connect.s3.S3SinkConnectorTestBase;
-
-import static io.confluent.connect.s3.S3SinkConnectorConfig.S3_RETRY_BACKOFF_CONFIG;
-import static io.confluent.connect.s3.S3SinkConnectorConfig.S3_RETRY_MAX_BACKOFF_TIME_MS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import java.util.HashMap;
+import java.util.Map;
+import org.apache.http.HttpStatus;
+import org.junit.Test;
 
 public class S3StorageTest extends S3SinkConnectorTestBase {
 
-  /**
-   * Maximum retry limit.
-   **/
+  /** Maximum retry limit. */
   public static final int MAX_RETRIES = 30;
 
   protected RetryPolicy retryPolicy;
@@ -56,7 +52,7 @@ public class S3StorageTest extends S3SinkConnectorTestBase {
     return props;
   }
 
-  //@Before should be omitted in order to be able to add properties per test.
+  // @Before should be omitted in order to be able to add properties per test.
   public void setUp() throws Exception {
     super.setUp();
     storage = new S3Storage(connectorConfig, url);
@@ -66,10 +62,12 @@ public class S3StorageTest extends S3SinkConnectorTestBase {
   @Test
   public void testRetryPolicy() throws Exception {
     setUp();
-    assertTrue(retryPolicy.getRetryCondition() instanceof PredefinedRetryPolicies
-        .SDKDefaultRetryCondition);
-    assertTrue(retryPolicy.getBackoffStrategy() instanceof PredefinedBackoffStrategies
-        .FullJitterBackoffStrategy);
+    assertTrue(
+        retryPolicy.getRetryCondition()
+            instanceof PredefinedRetryPolicies.SDKDefaultRetryCondition);
+    assertTrue(
+        retryPolicy.getBackoffStrategy()
+            instanceof PredefinedBackoffStrategies.FullJitterBackoffStrategy);
   }
 
   @Test
@@ -127,26 +125,30 @@ public class S3StorageTest extends S3SinkConnectorTestBase {
     // default values
     setUp();
     AWSCredentialsProvider credentialsProvider = storage.newCredentialsProvider(connectorConfig);
-    assertTrue(S3SinkConnectorConfig.CREDENTIALS_PROVIDER_CLASS_DEFAULT.isInstance(credentialsProvider));
+    assertTrue(
+        S3SinkConnectorConfig.CREDENTIALS_PROVIDER_CLASS_DEFAULT.isInstance(credentialsProvider));
 
     // empty default values
     localProps.put(S3SinkConnectorConfig.AWS_ACCESS_KEY_ID_CONFIG, "");
     localProps.put(S3SinkConnectorConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "");
     setUp();
     credentialsProvider = storage.newCredentialsProvider(connectorConfig);
-    assertTrue(S3SinkConnectorConfig.CREDENTIALS_PROVIDER_CLASS_DEFAULT.isInstance(credentialsProvider));
+    assertTrue(
+        S3SinkConnectorConfig.CREDENTIALS_PROVIDER_CLASS_DEFAULT.isInstance(credentialsProvider));
   }
 
   @Test
   public void testUserDefinedCredentialsProvider() throws Exception {
     String configPrefix = S3SinkConnectorConfig.CREDENTIALS_PROVIDER_CONFIG_PREFIX;
-    localProps.put(configPrefix.concat(DummyAssertiveCredentialsProvider.ACCESS_KEY_NAME), "foo_key");
-    localProps.put(configPrefix.concat(DummyAssertiveCredentialsProvider.SECRET_KEY_NAME), "bar_secret");
-    localProps.put(configPrefix.concat(DummyAssertiveCredentialsProvider.CONFIGS_NUM_KEY_NAME), "3");
+    localProps.put(
+        configPrefix.concat(DummyAssertiveCredentialsProvider.ACCESS_KEY_NAME), "foo_key");
+    localProps.put(
+        configPrefix.concat(DummyAssertiveCredentialsProvider.SECRET_KEY_NAME), "bar_secret");
+    localProps.put(
+        configPrefix.concat(DummyAssertiveCredentialsProvider.CONFIGS_NUM_KEY_NAME), "3");
     localProps.put(
         S3SinkConnectorConfig.CREDENTIALS_PROVIDER_CLASS_CONFIG,
-        DummyAssertiveCredentialsProvider.class.getName()
-    );
+        DummyAssertiveCredentialsProvider.class.getName());
     setUp();
     AWSCredentialsProvider credentialsProvider = storage.newCredentialsProvider(connectorConfig);
     assertTrue(credentialsProvider instanceof DummyAssertiveCredentialsProvider);
@@ -162,27 +164,22 @@ public class S3StorageTest extends S3SinkConnectorTestBase {
   }
 
   /**
-   * Calculates exponential delay, capped by
-   * {@link com.amazonaws.retry.PredefinedBackoffStrategies#MAX_RETRIES} number of retries
-   * and {@link io.confluent.connect.s3.S3SinkConnectorConfig#S3_RETRY_MAX_BACKOFF_TIME_MS} total delay time
-   * in ms
+   * Calculates exponential delay, capped by {@link
+   * com.amazonaws.retry.PredefinedBackoffStrategies#MAX_RETRIES} number of retries and {@link
+   * io.confluent.connect.s3.S3SinkConnectorConfig#S3_RETRY_MAX_BACKOFF_TIME_MS} total delay time in
+   * ms
    *
    * @param retriesAttempted
    * @param baseDelay
    * @return
    * @see PredefinedBackoffStrategies#calculateExponentialDelay(int, int, int)
    */
-  private int calculateExponentialDelay(
-      int retriesAttempted, long baseDelay
-  ) {
+  private int calculateExponentialDelay(int retriesAttempted, long baseDelay) {
     int retries = Math.min(retriesAttempted, MAX_RETRIES);
     return (int) Math.min((1L << retries) * baseDelay, S3_RETRY_MAX_BACKOFF_TIME_MS);
   }
 
-  private void assertComputeRetryInRange(
-      int retryAttempts,
-      long retryBackoffMs
-  ) throws Exception {
+  private void assertComputeRetryInRange(int retryAttempts, long retryBackoffMs) throws Exception {
     localProps.put(S3_RETRY_BACKOFF_CONFIG, String.valueOf(retryBackoffMs));
     setUp();
     RetryPolicy.BackoffStrategy backoffStrategy = retryPolicy.getBackoffStrategy();

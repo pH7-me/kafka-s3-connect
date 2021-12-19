@@ -1,6 +1,17 @@
 package io.confluent.connect.s3.format.parquet;
 
 import io.confluent.connect.avro.AvroData;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.channels.Channels;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Collection;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -18,21 +29,10 @@ import org.apache.parquet.io.DelegatingSeekableInputStream;
 import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.SeekableInputStream;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.channels.Channels;
-import java.nio.channels.SeekableByteChannel;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.Collection;
-
 public class ParquetUtils {
 
-  public static Collection<Object> getRecords(InputStream inputStream, String fileKey) throws IOException {
+  public static Collection<Object> getRecords(InputStream inputStream, String fileKey)
+      throws IOException {
     File tempFile = File.createTempFile(fileKey, "");
     java.nio.file.Path filePath = tempFile.toPath();
     tempFile.deleteOnExit();
@@ -42,8 +42,8 @@ public class ParquetUtils {
     SeekableByteChannel sbc = Files.newByteChannel(filePath, StandardOpenOption.READ);
     S3ParquetInputFile parquetInputFile = new S3ParquetInputFile(sbc);
     ArrayList<Object> records = new ArrayList<>();
-    try(ParquetReader<GenericRecord> reader = AvroParquetReader
-            .<GenericRecord>builder(parquetInputFile)
+    try (ParquetReader<GenericRecord> reader =
+        AvroParquetReader.<GenericRecord>builder(parquetInputFile)
             .withCompatibility(false)
             .build()) {
       GenericRecord record;
@@ -56,7 +56,8 @@ public class ParquetUtils {
     return records;
   }
 
-  public static byte[] putRecords(Collection<SinkRecord> records, AvroData avroData) throws IOException {
+  public static byte[] putRecords(Collection<SinkRecord> records, AvroData avroData)
+      throws IOException {
     ParquetWriter<GenericRecord> writer = null;
     Path tempFilePath = new Path("temp");
     Schema schema = null;
@@ -65,13 +66,13 @@ public class ParquetUtils {
         schema = record.valueSchema();
         final int pageSize = 64 * 1024;
         org.apache.avro.Schema avroSchema = avroData.fromConnectSchema(schema);
-        writer = AvroParquetWriter
-          .<GenericRecord>builder(tempFilePath)
-          .withSchema(avroSchema)
-          .withWriteMode(ParquetFileWriter.Mode.OVERWRITE)
-          .withDictionaryEncoding(true)
-          .withPageSize(pageSize)
-          .build();
+        writer =
+            AvroParquetWriter.<GenericRecord>builder(tempFilePath)
+                .withSchema(avroSchema)
+                .withWriteMode(ParquetFileWriter.Mode.OVERWRITE)
+                .withDictionaryEncoding(true)
+                .withPageSize(pageSize)
+                .build();
       }
       Object value = avroData.fromConnectData(schema, record.value());
       try {
@@ -89,13 +90,14 @@ public class ParquetUtils {
     } catch (IOException e) {
       e.printStackTrace();
     }
-    FSDataInputStream fsDataInputStream = tempFilePath.getFileSystem(new Configuration()).open(tempFilePath);
+    FSDataInputStream fsDataInputStream =
+        tempFilePath.getFileSystem(new Configuration()).open(tempFilePath);
     InputStream inputStream = fsDataInputStream.getWrappedStream();
     fsDataInputStream.getWrappedStream();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     byte[] buff = new byte[8000];
     int bytesRead;
-    while((bytesRead = inputStream.read(buff)) != -1) {
+    while ((bytesRead = inputStream.read(buff)) != -1) {
       out.write(buff, 0, bytesRead);
     }
     fsDataInputStream.close();

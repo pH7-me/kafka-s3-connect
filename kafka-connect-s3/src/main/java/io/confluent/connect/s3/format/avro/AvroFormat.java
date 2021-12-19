@@ -45,8 +45,7 @@ public class AvroFormat implements Format<S3SinkConnectorConfig, String> {
   @Deprecated
   public Object getHiveFactory() {
     throw new UnsupportedOperationException(
-        "Hive integration is not currently supported in S3 Connector"
-    );
+        "Hive integration is not currently supported in S3 Connector");
   }
 
   public AvroData getAvroData() {

@@ -17,49 +17,47 @@ package io.confluent.connect.s3.storage;
 
 import java.nio.ByteBuffer;
 
-/**
- * A simple byte buf
- */
+/** A simple byte buf */
 public class SimpleByteBuf implements ByteBuf {
 
-    private ByteBuffer buffer;
+  private ByteBuffer buffer;
 
-    public SimpleByteBuf(int capacity) {
-        this.buffer = ByteBuffer.allocate(capacity);
-    }
+  public SimpleByteBuf(int capacity) {
+    this.buffer = ByteBuffer.allocate(capacity);
+  }
 
-    @Override
-    public void put(byte b) {
-        this.buffer.put(b);
-    }
+  @Override
+  public void put(byte b) {
+    this.buffer.put(b);
+  }
 
-    @Override
-    public void put(byte[] src, int offset, int length) {
-        this.buffer.put(src, offset, length);
-    }
+  @Override
+  public void put(byte[] src, int offset, int length) {
+    this.buffer.put(src, offset, length);
+  }
 
-    @Override
-    public boolean hasRemaining() {
-        return this.buffer.hasRemaining();
-    }
+  @Override
+  public boolean hasRemaining() {
+    return this.buffer.hasRemaining();
+  }
 
-    @Override
-    public int remaining() {
-        return this.buffer.remaining();
-    }
+  @Override
+  public int remaining() {
+    return this.buffer.remaining();
+  }
 
-    @Override
-    public int position() {
-        return this.buffer.position();
-    }
+  @Override
+  public int position() {
+    return this.buffer.position();
+  }
 
-    @Override
-    public void clear() {
-        this.buffer.clear();
-    }
+  @Override
+  public void clear() {
+    this.buffer.clear();
+  }
 
-    @Override
-    public byte[] array() {
-        return this.buffer.array();
-    }
+  @Override
+  public byte[] array() {
+    return this.buffer.array();
+  }
 }

@@ -15,29 +15,25 @@
 
 package io.confluent.connect.s3;
 
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import static org.junit.Assert.assertArrayEquals;
+
 import io.confluent.connect.s3.format.bytearray.ByteArrayFormat;
 import io.confluent.connect.s3.storage.CompressionType;
 import io.confluent.connect.s3.storage.S3OutputStream;
 import io.confluent.connect.s3.util.FileUtils;
-
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.zip.Deflater;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.After;
 import org.junit.Test;
 import org.powermock.api.mockito.PowerMockito;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.zip.Deflater;
-
-import static org.junit.Assert.assertArrayEquals;
 
 public class DataWriterByteArrayTest extends DataWriterTestBase<ByteArrayFormat> {
 
@@ -61,7 +57,7 @@ public class DataWriterByteArrayTest extends DataWriterTestBase<ByteArrayFormat>
     return props;
   }
 
-  //@Before should be omitted in order to be able to add properties per test.
+  // @Before should be omitted in order to be able to add properties per test.
   public void setUp() throws Exception {
     super.setUp();
     converter = new ByteArrayConverter();
@@ -80,7 +76,7 @@ public class DataWriterByteArrayTest extends DataWriterTestBase<ByteArrayFormat>
     setUp();
     PowerMockito.doReturn(5).when(connectorConfig).getPartSize();
     S3OutputStream out = new S3OutputStream(S3_TEST_BUCKET_NAME, connectorConfig, s3);
-    out.write(new byte[]{65,66,67,68,69});
+    out.write(new byte[] {65, 66, 67, 68, 69});
     out.write(70);
   }
 
@@ -90,7 +86,9 @@ public class DataWriterByteArrayTest extends DataWriterTestBase<ByteArrayFormat>
     setUp();
     task = new S3SinkTask(connectorConfig, context, storage, partitioner, format, SYSTEM_TIME);
 
-    List<SinkRecord> sinkRecords = createByteArrayRecordsWithoutSchema(7 * context.assignment().size(), 0, context.assignment());
+    List<SinkRecord> sinkRecords =
+        createByteArrayRecordsWithoutSchema(
+            7 * context.assignment().size(), 0, context.assignment());
     task.put(sinkRecords);
     task.close(context.assignment());
     task.stop();
@@ -107,7 +105,9 @@ public class DataWriterByteArrayTest extends DataWriterTestBase<ByteArrayFormat>
     setUp();
     task = new S3SinkTask(connectorConfig, context, storage, partitioner, format, SYSTEM_TIME);
 
-    List<SinkRecord> sinkRecords = createByteArrayRecordsWithoutSchema(7 * context.assignment().size(), 0, context.assignment());
+    List<SinkRecord> sinkRecords =
+        createByteArrayRecordsWithoutSchema(
+            7 * context.assignment().size(), 0, context.assignment());
     task.put(sinkRecords);
     task.close(context.assignment());
     task.stop();
@@ -121,11 +121,14 @@ public class DataWriterByteArrayTest extends DataWriterTestBase<ByteArrayFormat>
     CompressionType compressionType = CompressionType.GZIP;
     localProps.put(S3SinkConnectorConfig.FORMAT_CLASS_CONFIG, ByteArrayFormat.class.getName());
     localProps.put(S3SinkConnectorConfig.COMPRESSION_TYPE_CONFIG, compressionType.name);
-    localProps.put(S3SinkConnectorConfig.COMPRESSION_LEVEL_CONFIG, String.valueOf(Deflater.BEST_COMPRESSION));
+    localProps.put(
+        S3SinkConnectorConfig.COMPRESSION_LEVEL_CONFIG, String.valueOf(Deflater.BEST_COMPRESSION));
     setUp();
     task = new S3SinkTask(connectorConfig, context, storage, partitioner, format, SYSTEM_TIME);
 
-    List<SinkRecord> sinkRecords = createByteArrayRecordsWithoutSchema(7 * context.assignment().size(), 0, context.assignment());
+    List<SinkRecord> sinkRecords =
+        createByteArrayRecordsWithoutSchema(
+            7 * context.assignment().size(), 0, context.assignment());
     task.put(sinkRecords);
     task.close(context.assignment());
     task.stop();
@@ -143,7 +146,9 @@ public class DataWriterByteArrayTest extends DataWriterTestBase<ByteArrayFormat>
     setUp();
     task = new S3SinkTask(connectorConfig, context, storage, partitioner, format, SYSTEM_TIME);
 
-    List<SinkRecord> sinkRecords = createByteArrayRecordsWithoutSchema(7 * context.assignment().size(), 0, context.assignment());
+    List<SinkRecord> sinkRecords =
+        createByteArrayRecordsWithoutSchema(
+            7 * context.assignment().size(), 0, context.assignment());
     task.put(sinkRecords);
     task.close(context.assignment());
     task.stop();
@@ -170,24 +175,32 @@ public class DataWriterByteArrayTest extends DataWriterTestBase<ByteArrayFormat>
     testCorrectRecordWriterHelper("this.is" + DEFAULT_EXTENSION + ".dir");
   }
 
-  protected List<SinkRecord> createByteArrayRecordsWithoutSchema(int size, long startOffset, Set<TopicPartition> partitions) {
+  protected List<SinkRecord> createByteArrayRecordsWithoutSchema(
+      int size, long startOffset, Set<TopicPartition> partitions) {
     String key = "key";
     int ibase = 12;
 
     List<SinkRecord> sinkRecords = new ArrayList<>();
     for (long offset = startOffset, total = 0; total < size; ++offset) {
       for (TopicPartition tp : partitions) {
-        byte[] record = ("{\"schema\":{\"type\":\"struct\",\"fields\":[ " +
-                            "{\"type\":\"boolean\",\"optional\":true,\"field\":\"booleanField\"}," +
-                            "{\"type\":\"int32\",\"optional\":true,\"field\":\"intField\"}," +
-                            "{\"type\":\"int64\",\"optional\":true,\"field\":\"longField\"}," +
-                            "{\"type\":\"string\",\"optional\":false,\"field\":\"stringField\"}]," +
-                            "\"payload\":" +
-                            "{\"booleanField\":\"true\"," +
-                            "\"intField\":" + String.valueOf(ibase) + "," +
-                            "\"longField\":" + String.valueOf((long) ibase) + "," +
-                            "\"stringField\":str" + String.valueOf(ibase) +
-                            "}}").getBytes();
+        byte[] record =
+            ("{\"schema\":{\"type\":\"struct\",\"fields\":[ "
+                    + "{\"type\":\"boolean\",\"optional\":true,\"field\":\"booleanField\"},"
+                    + "{\"type\":\"int32\",\"optional\":true,\"field\":\"intField\"},"
+                    + "{\"type\":\"int64\",\"optional\":true,\"field\":\"longField\"},"
+                    + "{\"type\":\"string\",\"optional\":false,\"field\":\"stringField\"}],"
+                    + "\"payload\":"
+                    + "{\"booleanField\":\"true\","
+                    + "\"intField\":"
+                    + String.valueOf(ibase)
+                    + ","
+                    + "\"longField\":"
+                    + String.valueOf((long) ibase)
+                    + ","
+                    + "\"stringField\":str"
+                    + String.valueOf(ibase)
+                    + "}}")
+                .getBytes();
         sinkRecords.add(new SinkRecord(TOPIC, tp.partition(), null, key, null, record, offset));
         if (++total >= size) {
           break;
@@ -202,7 +215,8 @@ public class DataWriterByteArrayTest extends DataWriterTestBase<ByteArrayFormat>
     return partitioner.generatePartitionedPath(topic, encodedPartition);
   }
 
-  protected void verifyContents(List<SinkRecord> expectedRecords, int startIndex, Collection<Object> records) {
+  protected void verifyContents(
+      List<SinkRecord> expectedRecords, int startIndex, Collection<Object> records) {
     for (Object record : records) {
       byte[] bytes = (byte[]) record;
       SinkRecord expectedRecord = expectedRecords.get(startIndex++);
@@ -214,41 +228,41 @@ public class DataWriterByteArrayTest extends DataWriterTestBase<ByteArrayFormat>
   @Override
   protected List<SinkRecord> createGenericRecords(int count, long firstOffset) {
     return createByteArrayRecordsWithoutSchema(
-        count * context.assignment().size(),
-        firstOffset,
-        context.assignment()
-    );
+        count * context.assignment().size(), firstOffset, context.assignment());
   }
 
   @Override
   protected void verify(
-      List<SinkRecord> sinkRecords,
-      long[] validOffsets,
-      Set<TopicPartition> partitions
-  ) throws IOException {
-    verify(
-        sinkRecords,
-        validOffsets,
-        partitions,
-        DEFAULT_EXTENSION
-    );
+      List<SinkRecord> sinkRecords, long[] validOffsets, Set<TopicPartition> partitions)
+      throws IOException {
+    verify(sinkRecords, validOffsets, partitions, DEFAULT_EXTENSION);
   }
 
-  protected void verify(List<SinkRecord> sinkRecords, long[] validOffsets, Set<TopicPartition> partitions,
-                        String extension) throws IOException {
+  protected void verify(
+      List<SinkRecord> sinkRecords,
+      long[] validOffsets,
+      Set<TopicPartition> partitions,
+      String extension)
+      throws IOException {
     verify(sinkRecords, validOffsets, partitions, extension, false);
   }
 
   /**
    * Verify files and records are uploaded appropriately.
-   * @param sinkRecords a flat list of the records that need to appear in potentially several files in S3.
-   * @param validOffsets an array containing the offsets that map to uploaded files for a topic-partition.
-   *                     Offsets appear in ascending order, the difference between two consecutive offsets
-   *                     equals the expected size of the file, and last offset in exclusive.
+   *
+   * @param sinkRecords a flat list of the records that need to appear in potentially several files
+   *     in S3.
+   * @param validOffsets an array containing the offsets that map to uploaded files for a
+   *     topic-partition. Offsets appear in ascending order, the difference between two consecutive
+   *     offsets equals the expected size of the file, and last offset in exclusive.
    * @throws IOException
    */
-  protected void verify(List<SinkRecord> sinkRecords, long[] validOffsets, Set<TopicPartition> partitions,
-                        String extension, boolean skipFileListing)
+  protected void verify(
+      List<SinkRecord> sinkRecords,
+      long[] validOffsets,
+      Set<TopicPartition> partitions,
+      String extension,
+      boolean skipFileListing)
       throws IOException {
     if (!skipFileListing) {
       verifyFileListing(validOffsets, partitions, extension);
@@ -259,9 +273,23 @@ public class DataWriterByteArrayTest extends DataWriterTestBase<ByteArrayFormat>
         long startOffset = validOffsets[i - 1];
         long size = validOffsets[i] - startOffset;
 
-        FileUtils.fileKeyToCommit(topicsDir, getDirectory(tp.topic(), tp.partition()), tp, startOffset, extension, ZERO_PAD_FMT);
-        Collection<Object> records = readRecords(topicsDir, getDirectory(tp.topic(), tp.partition()), tp, startOffset,
-                                                 extension, ZERO_PAD_FMT, S3_TEST_BUCKET_NAME, s3);
+        FileUtils.fileKeyToCommit(
+            topicsDir,
+            getDirectory(tp.topic(), tp.partition()),
+            tp,
+            startOffset,
+            extension,
+            ZERO_PAD_FMT);
+        Collection<Object> records =
+            readRecords(
+                topicsDir,
+                getDirectory(tp.topic(), tp.partition()),
+                tp,
+                startOffset,
+                extension,
+                ZERO_PAD_FMT,
+                S3_TEST_BUCKET_NAME,
+                s3);
         // assertEquals(size, records.size());
         verifyContents(sinkRecords, j, records);
         j += size;

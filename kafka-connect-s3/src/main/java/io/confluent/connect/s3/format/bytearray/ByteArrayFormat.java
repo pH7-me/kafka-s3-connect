@@ -20,10 +20,9 @@ import io.confluent.connect.s3.storage.S3Storage;
 import io.confluent.connect.storage.format.Format;
 import io.confluent.connect.storage.format.RecordWriterProvider;
 import io.confluent.connect.storage.format.SchemaFileReader;
-import org.apache.kafka.connect.converters.ByteArrayConverter;
-
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.kafka.connect.converters.ByteArrayConverter;
 
 public class ByteArrayFormat implements Format<S3SinkConnectorConfig, String> {
   private final S3Storage storage;
@@ -52,5 +51,4 @@ public class ByteArrayFormat implements Format<S3SinkConnectorConfig, String> {
     throw new UnsupportedOperationException(
         "Hive integration is not currently supported in S3 Connector");
   }
-
 }

@@ -15,18 +15,17 @@
 
 package io.confluent.connect.s3;
 
+import static org.junit.Assert.assertEquals;
+
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import java.util.Map;
 import org.apache.kafka.common.Configurable;
 import org.apache.kafka.common.config.ConfigException;
 
-import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
-
-public final class DummyAssertiveCredentialsProvider implements AWSCredentialsProvider,
-    Configurable {
+public final class DummyAssertiveCredentialsProvider
+    implements AWSCredentialsProvider, Configurable {
 
   public static final String ACCESS_KEY_NAME = "access.key";
   public static final String SECRET_KEY_NAME = "secret.key";
@@ -42,8 +41,7 @@ public final class DummyAssertiveCredentialsProvider implements AWSCredentialsPr
   @Override
   public void refresh() {
     throw new UnsupportedOperationException(
-        "Refresh is not supported for this credentials provider"
-    );
+        "Refresh is not supported for this credentials provider");
   }
 
   @Override
@@ -62,11 +60,11 @@ public final class DummyAssertiveCredentialsProvider implements AWSCredentialsPr
 
   private void validateConfigs(Map<String, ?> configs) {
 
-    if (!configs.containsKey(ACCESS_KEY_NAME) ||
-        !configs.containsKey(SECRET_KEY_NAME)) {
-      throw new ConfigException(String.format("%s and %s are mandatory configuration properties",
-          ACCESS_KEY_NAME, SECRET_KEY_NAME
-      ));
+    if (!configs.containsKey(ACCESS_KEY_NAME) || !configs.containsKey(SECRET_KEY_NAME)) {
+      throw new ConfigException(
+          String.format(
+              "%s and %s are mandatory configuration properties",
+              ACCESS_KEY_NAME, SECRET_KEY_NAME));
     }
   }
 }

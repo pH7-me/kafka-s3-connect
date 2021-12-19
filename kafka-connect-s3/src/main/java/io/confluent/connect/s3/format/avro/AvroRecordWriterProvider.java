@@ -17,6 +17,15 @@ package io.confluent.connect.s3.format.avro;
 
 import static io.confluent.connect.s3.util.Utils.getAdjustedFilename;
 
+import io.confluent.connect.avro.AvroData;
+import io.confluent.connect.s3.S3SinkConnectorConfig;
+import io.confluent.connect.s3.format.RecordViewSetter;
+import io.confluent.connect.s3.storage.S3OutputStream;
+import io.confluent.connect.s3.storage.S3Storage;
+import io.confluent.connect.storage.format.RecordWriter;
+import io.confluent.connect.storage.format.RecordWriterProvider;
+import io.confluent.kafka.serializers.NonRecordContainer;
+import java.io.IOException;
 import org.apache.avro.file.CodecFactory;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -26,17 +35,6 @@ import org.apache.kafka.connect.errors.RetriableException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-
-import io.confluent.connect.avro.AvroData;
-import io.confluent.connect.s3.S3SinkConnectorConfig;
-import io.confluent.connect.s3.format.RecordViewSetter;
-import io.confluent.connect.s3.storage.S3OutputStream;
-import io.confluent.connect.s3.storage.S3Storage;
-import io.confluent.connect.storage.format.RecordWriter;
-import io.confluent.connect.storage.format.RecordWriterProvider;
-import io.confluent.kafka.serializers.NonRecordContainer;
 
 public class AvroRecordWriterProvider extends RecordViewSetter
     implements RecordWriterProvider<S3SinkConnectorConfig> {

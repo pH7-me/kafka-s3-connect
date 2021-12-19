@@ -16,6 +16,31 @@
 
 package io.confluent.connect.s3;
 
+import static org.apache.kafka.common.utils.Time.SYSTEM;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
+import io.confluent.common.utils.MockTime;
+import io.confluent.common.utils.Time;
+import io.confluent.connect.s3.format.parquet.ParquetFormat;
+import io.confluent.connect.s3.format.parquet.ParquetUtils;
+import io.confluent.connect.s3.util.FileUtils;
+import io.confluent.connect.storage.StorageSinkConnectorConfig;
+import io.confluent.connect.storage.partitioner.PartitionerConfig;
+import io.confluent.connect.storage.partitioner.TimeBasedPartitioner;
+import io.confluent.kafka.serializers.NonRecordContainer;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.apache.avro.util.Utf8;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -29,33 +54,6 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.junit.After;
 import org.junit.Test;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
-import io.confluent.common.utils.MockTime;
-import io.confluent.common.utils.Time;
-import io.confluent.connect.s3.format.parquet.ParquetFormat;
-import io.confluent.connect.s3.format.parquet.ParquetUtils;
-import io.confluent.connect.s3.util.FileUtils;
-import io.confluent.connect.storage.StorageSinkConnectorConfig;
-import io.confluent.connect.storage.partitioner.PartitionerConfig;
-import io.confluent.connect.storage.partitioner.TimeBasedPartitioner;
-import io.confluent.kafka.serializers.NonRecordContainer;
-
-import static org.apache.kafka.common.utils.Time.SYSTEM;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
 public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
 
@@ -94,7 +92,8 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
   @Test
   public void testUncompressedCompressionWriteRecords() throws Exception {
     localProps.put(S3SinkConnectorConfig.PARQUET_CODEC_CONFIG, "none");
-    writeRecordsWithExtensionAndVerifyResult(CompressionCodecName.UNCOMPRESSED.getExtension() + ".parquet");
+    writeRecordsWithExtensionAndVerifyResult(
+        CompressionCodecName.UNCOMPRESSED.getExtension() + ".parquet");
   }
 
   @Test
@@ -117,7 +116,9 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
     System.setProperty("com.amazonaws.services.s3.disableGetObjectMD5Validation", "true");
     List<SinkRecord> sinkRecords = createRecords(2);
     byte[] partialData = ParquetUtils.putRecords(sinkRecords, format.getAvroData());
-    String fileKey = FileUtils.fileKeyToCommit(topicsDir, getDirectory(), TOPIC_PARTITION, 0, EXTENSION, ZERO_PAD_FMT);
+    String fileKey =
+        FileUtils.fileKeyToCommit(
+            topicsDir, getDirectory(), TOPIC_PARTITION, 0, EXTENSION, ZERO_PAD_FMT);
     s3.putObject(S3_TEST_BUCKET_NAME, fileKey, new ByteArrayInputStream(partialData), null);
 
     // Accumulate rest of the records.
@@ -182,7 +183,8 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
   }
 
   @Test
-  public void testWriteInterleavedRecordsInMultiplePartitionsNonZeroInitialOffset() throws Exception {
+  public void testWriteInterleavedRecordsInMultiplePartitionsNonZeroInitialOffset()
+      throws Exception {
     setUp();
     task = new S3SinkTask(connectorConfig, context, storage, partitioner, format, SYSTEM_TIME);
 
@@ -265,31 +267,28 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
     // Do not roll on size, only based on time.
     localProps.put(S3SinkConnectorConfig.FLUSH_SIZE_CONFIG, "1000");
     localProps.put(
-            S3SinkConnectorConfig.ROTATE_INTERVAL_MS_CONFIG,
-            String.valueOf(TimeUnit.HOURS.toMillis(1))
-    );
+        S3SinkConnectorConfig.ROTATE_INTERVAL_MS_CONFIG,
+        String.valueOf(TimeUnit.HOURS.toMillis(1)));
     setUp();
 
     // Define the partitioner
     TimeBasedPartitioner<?> partitioner = new TimeBasedPartitioner<>();
     parsedConfig.put(PartitionerConfig.PARTITION_DURATION_MS_CONFIG, TimeUnit.DAYS.toMillis(1));
     parsedConfig.put(
-            PartitionerConfig.TIMESTAMP_EXTRACTOR_CLASS_CONFIG,
-            TopicPartitionWriterTest.MockedWallclockTimestampExtractor.class.getName()
-    );
+        PartitionerConfig.TIMESTAMP_EXTRACTOR_CLASS_CONFIG,
+        TopicPartitionWriterTest.MockedWallclockTimestampExtractor.class.getName());
     partitioner.configure(parsedConfig);
 
-    MockTime time = ((TopicPartitionWriterTest.MockedWallclockTimestampExtractor) partitioner
-            .getTimestampExtractor()).time;
+    MockTime time =
+        ((TopicPartitionWriterTest.MockedWallclockTimestampExtractor)
+                partitioner.getTimestampExtractor())
+            .time;
     // Bring the clock to present.
     time.sleep(SYSTEM.milliseconds());
 
-    List<SinkRecord> sinkRecords = createRecordsWithTimestamp(
-            4,
-            0,
-            Collections.singleton(new TopicPartition(TOPIC, PARTITION)),
-            time
-    );
+    List<SinkRecord> sinkRecords =
+        createRecordsWithTimestamp(
+            4, 0, Collections.singleton(new TopicPartition(TOPIC, PARTITION)), time);
 
     task = new S3SinkTask(connectorConfig, context, storage, partitioner, format, time);
 
@@ -322,9 +321,8 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
     // Do not roll on size, only based on time.
     localProps.put(S3SinkConnectorConfig.FLUSH_SIZE_CONFIG, "1000");
     localProps.put(
-            S3SinkConnectorConfig.ROTATE_SCHEDULE_INTERVAL_MS_CONFIG,
-            String.valueOf(TimeUnit.HOURS.toMillis(1))
-    );
+        S3SinkConnectorConfig.ROTATE_SCHEDULE_INTERVAL_MS_CONFIG,
+        String.valueOf(TimeUnit.HOURS.toMillis(1)));
     setUp();
 
     MockTime time = new MockTime();
@@ -462,7 +460,7 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
     verify(sinkRecords, validOffsets);
   }
 
-  @Test(expected=ConnectException.class)
+  @Test(expected = ConnectException.class)
   public void testProjectNoVersion() throws Exception {
     localProps.put(S3SinkConnectorConfig.FLUSH_SIZE_CONFIG, "2");
     localProps.put(StorageSinkConnectorConfig.SCHEMA_COMPATIBILITY_CONFIG, "BACKWARD");
@@ -531,10 +529,12 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
    * @return the list of records.
    */
   protected List<SinkRecord> createRecords(int size, long startOffset) {
-    return createRecords(size, startOffset, Collections.singleton(new TopicPartition(TOPIC, PARTITION)));
+    return createRecords(
+        size, startOffset, Collections.singleton(new TopicPartition(TOPIC, PARTITION)));
   }
 
-  protected List<SinkRecord> createRecords(int size, long startOffset, Set<TopicPartition> partitions) {
+  protected List<SinkRecord> createRecords(
+      int size, long startOffset, Set<TopicPartition> partitions) {
     String key = "key";
     Schema schema = createSchema();
     Struct record = createRecord(schema);
@@ -542,13 +542,16 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
     List<SinkRecord> sinkRecords = new ArrayList<>();
     for (TopicPartition tp : partitions) {
       for (long offset = startOffset; offset < startOffset + size; ++offset) {
-        sinkRecords.add(new SinkRecord(TOPIC, tp.partition(), Schema.STRING_SCHEMA, key, schema, record, offset));
+        sinkRecords.add(
+            new SinkRecord(
+                TOPIC, tp.partition(), Schema.STRING_SCHEMA, key, schema, record, offset));
       }
     }
     return sinkRecords;
   }
 
-  protected List<SinkRecord> createRecordsInterleaved(int size, long startOffset, Set<TopicPartition> partitions) {
+  protected List<SinkRecord> createRecordsInterleaved(
+      int size, long startOffset, Set<TopicPartition> partitions) {
     String key = "key";
     Schema schema = createSchema();
     Struct record = createRecord(schema);
@@ -556,18 +559,16 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
     List<SinkRecord> sinkRecords = new ArrayList<>();
     for (long offset = startOffset; offset < startOffset + size; ++offset) {
       for (TopicPartition tp : partitions) {
-        sinkRecords.add(new SinkRecord(TOPIC, tp.partition(), Schema.STRING_SCHEMA, key, schema, record, offset));
+        sinkRecords.add(
+            new SinkRecord(
+                TOPIC, tp.partition(), Schema.STRING_SCHEMA, key, schema, record, offset));
       }
     }
     return sinkRecords;
   }
 
   protected List<SinkRecord> createRecordsWithTimestamp(
-          int size,
-          long startOffset,
-          Set<TopicPartition> partitions,
-          Time time
-  ) {
+      int size, long startOffset, Set<TopicPartition> partitions, Time time) {
     String key = "key";
     Schema schema = createSchema();
     Struct record = createRecord(schema);
@@ -575,7 +576,8 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
     List<SinkRecord> sinkRecords = new ArrayList<>();
     for (TopicPartition tp : partitions) {
       for (long offset = startOffset; offset < startOffset + size; ++offset) {
-        sinkRecords.add(new SinkRecord(
+        sinkRecords.add(
+            new SinkRecord(
                 TOPIC,
                 tp.partition(),
                 Schema.STRING_SCHEMA,
@@ -584,8 +586,7 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
                 record,
                 offset,
                 time.milliseconds(),
-                TimestampType.CREATE_TIME
-        ));
+                TimestampType.CREATE_TIME));
       }
     }
     return sinkRecords;
@@ -593,7 +594,9 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
 
   protected List<SinkRecord> createRecordsNoVersion(int size, long startOffset) {
     String key = "key";
-    Schema schemaNoVersion = SchemaBuilder.struct().name("record")
+    Schema schemaNoVersion =
+        SchemaBuilder.struct()
+            .name("record")
             .field("boolean", Schema.BOOLEAN_SCHEMA)
             .field("int", Schema.INT32_SCHEMA)
             .field("long", Schema.INT64_SCHEMA)
@@ -602,16 +605,24 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
             .build();
 
     Struct recordNoVersion = new Struct(schemaNoVersion);
-    recordNoVersion.put("boolean", true)
-            .put("int", 12)
-            .put("long", 12L)
-            .put("float", 12.2f)
-            .put("double", 12.2);
+    recordNoVersion
+        .put("boolean", true)
+        .put("int", 12)
+        .put("long", 12L)
+        .put("float", 12.2f)
+        .put("double", 12.2);
 
     List<SinkRecord> sinkRecords = new ArrayList<>();
     for (long offset = startOffset; offset < startOffset + size; ++offset) {
-      sinkRecords.add(new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schemaNoVersion,
-              recordNoVersion, offset));
+      sinkRecords.add(
+          new SinkRecord(
+              TOPIC,
+              PARTITION,
+              Schema.STRING_SCHEMA,
+              key,
+              schemaNoVersion,
+              recordNoVersion,
+              offset));
     }
     return sinkRecords;
   }
@@ -623,38 +634,55 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
 
   @Override
   protected void verify(
-      List<SinkRecord> sinkRecords,
-      long[] validOffsets,
-      Set<TopicPartition> partitions
-  ) throws IOException {
+      List<SinkRecord> sinkRecords, long[] validOffsets, Set<TopicPartition> partitions)
+      throws IOException {
     verify(sinkRecords, validOffsets, partitions, false);
   }
 
-  protected void verify(List<SinkRecord> sinkRecords, long[] validOffsets, String extension) throws IOException {
-    verify(sinkRecords, validOffsets, Collections.singleton(new TopicPartition(TOPIC, PARTITION)), false, extension);
+  protected void verify(List<SinkRecord> sinkRecords, long[] validOffsets, String extension)
+      throws IOException {
+    verify(
+        sinkRecords,
+        validOffsets,
+        Collections.singleton(new TopicPartition(TOPIC, PARTITION)),
+        false,
+        extension);
   }
 
   protected void verify(List<SinkRecord> sinkRecords, long[] validOffsets) throws IOException {
-    verify(sinkRecords, validOffsets, Collections.singleton(new TopicPartition(TOPIC, PARTITION)), false);
+    verify(
+        sinkRecords,
+        validOffsets,
+        Collections.singleton(new TopicPartition(TOPIC, PARTITION)),
+        false);
   }
 
-  protected void verify(List<SinkRecord> sinkRecords, long[] validOffsets, Set<TopicPartition> partitions,
-                        boolean skipFileListing)
-          throws IOException {
+  protected void verify(
+      List<SinkRecord> sinkRecords,
+      long[] validOffsets,
+      Set<TopicPartition> partitions,
+      boolean skipFileListing)
+      throws IOException {
     verify(sinkRecords, validOffsets, partitions, skipFileListing, EXTENSION);
   }
 
   /**
    * Verify files and records are uploaded appropriately.
-   * @param sinkRecords a flat list of the records that need to appear in potentially several files in S3.
-   * @param validOffsets an array containing the offsets that map to uploaded files for a topic-partition.
-   *                     Offsets appear in ascending order, the difference between two consecutive offsets
-   *                     equals the expected size of the file, and last offset in exclusive.
+   *
+   * @param sinkRecords a flat list of the records that need to appear in potentially several files
+   *     in S3.
+   * @param validOffsets an array containing the offsets that map to uploaded files for a
+   *     topic-partition. Offsets appear in ascending order, the difference between two consecutive
+   *     offsets equals the expected size of the file, and last offset in exclusive.
    * @throws IOException throw this exception from readRecords
    */
-  protected void verify(List<SinkRecord> sinkRecords, long[] validOffsets, Set<TopicPartition> partitions,
-                        boolean skipFileListing, String extension)
-          throws IOException {
+  protected void verify(
+      List<SinkRecord> sinkRecords,
+      long[] validOffsets,
+      Set<TopicPartition> partitions,
+      boolean skipFileListing,
+      String extension)
+      throws IOException {
     if (!skipFileListing) {
       verifyFileListing(validOffsets, partitions, extension);
     }
@@ -664,9 +692,23 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
         long startOffset = validOffsets[i - 1];
         long size = validOffsets[i] - startOffset;
 
-        FileUtils.fileKeyToCommit(topicsDir, getDirectory(tp.topic(), tp.partition()), tp, startOffset, extension, ZERO_PAD_FMT);
-        Collection<Object> records = readRecords(topicsDir, getDirectory(tp.topic(), tp.partition()), tp, startOffset,
-                extension, ZERO_PAD_FMT, S3_TEST_BUCKET_NAME, s3);
+        FileUtils.fileKeyToCommit(
+            topicsDir,
+            getDirectory(tp.topic(), tp.partition()),
+            tp,
+            startOffset,
+            extension,
+            ZERO_PAD_FMT);
+        Collection<Object> records =
+            readRecords(
+                topicsDir,
+                getDirectory(tp.topic(), tp.partition()),
+                tp,
+                startOffset,
+                extension,
+                ZERO_PAD_FMT,
+                S3_TEST_BUCKET_NAME,
+                s3);
         assertEquals(size, records.size());
         verifyContents(sinkRecords, j, records);
         j += size;
@@ -674,13 +716,16 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
     }
   }
 
-  protected void verifyContents(List<SinkRecord> expectedRecords, int startIndex, Collection<Object> records) {
+  protected void verifyContents(
+      List<SinkRecord> expectedRecords, int startIndex, Collection<Object> records) {
     Schema expectedSchema = null;
     for (Object avroRecord : records) {
       if (expectedSchema == null) {
         expectedSchema = expectedRecords.get(startIndex).valueSchema();
       }
-      Object expectedValue = SchemaProjector.project(expectedRecords.get(startIndex).valueSchema(),
+      Object expectedValue =
+          SchemaProjector.project(
+              expectedRecords.get(startIndex).valueSchema(),
               expectedRecords.get(startIndex++).value(),
               expectedSchema);
       Object value = format.getAvroData().fromConnectData(expectedSchema, expectedValue);
@@ -706,8 +751,10 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
     return partitioner.generatePartitionedPath(topic, encodedPartition);
   }
 
-  protected void verifyOffsets(Map<TopicPartition, OffsetAndMetadata> actualOffsets, Long[] validOffsets,
-                               Set<TopicPartition> partitions) {
+  protected void verifyOffsets(
+      Map<TopicPartition, OffsetAndMetadata> actualOffsets,
+      Long[] validOffsets,
+      Set<TopicPartition> partitions) {
     int i = 0;
     Map<TopicPartition, OffsetAndMetadata> expectedOffsets = new HashMap<>();
     for (TopicPartition tp : partitions) {
@@ -730,12 +777,16 @@ public class DataWriterParquetTest extends DataWriterTestBase<ParquetFormat> {
     boolean remainder = size % 2 > 0;
     List<SinkRecord> sinkRecords = new ArrayList<>();
     for (long offset = startOffset; offset < startOffset + limit; ++offset) {
-      sinkRecords.add(new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schema, record, offset));
-      sinkRecords.add(new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, newSchema, newRecord, ++offset));
+      sinkRecords.add(
+          new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schema, record, offset));
+      sinkRecords.add(
+          new SinkRecord(
+              TOPIC, PARTITION, Schema.STRING_SCHEMA, key, newSchema, newRecord, ++offset));
     }
     if (remainder) {
-      sinkRecords.add(new SinkRecord(TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schema, record,
-              startOffset + size - 1));
+      sinkRecords.add(
+          new SinkRecord(
+              TOPIC, PARTITION, Schema.STRING_SCHEMA, key, schema, record, startOffset + size - 1));
     }
     return sinkRecords;
   }

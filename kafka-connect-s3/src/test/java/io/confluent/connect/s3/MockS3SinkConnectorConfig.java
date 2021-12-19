@@ -15,12 +15,11 @@
 
 package io.confluent.connect.s3;
 
+import java.util.Map;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigDef.Width;
-
-import java.util.Map;
 
 public class MockS3SinkConnectorConfig extends S3SinkConnectorConfig {
   public static final String TEST_PART_SIZE_CONFIG = "test.s3.part.size";
@@ -29,15 +28,16 @@ public class MockS3SinkConnectorConfig extends S3SinkConnectorConfig {
     ConfigDef configDef = S3SinkConnectorConfig.getConfig();
     final String group = "S3 Tests";
     int orderInGroup = 0;
-    configDef.define(TEST_PART_SIZE_CONFIG,
-                      Type.INT,
-                      1024,
-                      Importance.HIGH,
-                      "Tests - The Part Size in S3 Multi-part Uploads for tests.",
-                      group,
-                      ++orderInGroup,
-                      Width.MEDIUM,
-                      "Tests - S3 Part Size for tests");
+    configDef.define(
+        TEST_PART_SIZE_CONFIG,
+        Type.INT,
+        1024,
+        Importance.HIGH,
+        "Tests - The Part Size in S3 Multi-part Uploads for tests.",
+        group,
+        ++orderInGroup,
+        Width.MEDIUM,
+        "Tests - S3 Part Size for tests");
     return configDef;
   }
 

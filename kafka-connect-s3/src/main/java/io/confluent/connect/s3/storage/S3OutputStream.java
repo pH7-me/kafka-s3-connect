@@ -33,17 +33,15 @@ import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import io.confluent.connect.s3.S3SinkConnectorConfig;
 import io.confluent.connect.storage.common.util.StringUtils;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.parquet.io.PositionOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Output stream enabling multi-part uploads of Kafka records.
@@ -77,9 +75,11 @@ public class S3OutputStream extends PositionOutputStream {
     this.key = key;
     this.ssea = conf.getSsea();
     final String sseCustomerKeyConfig = conf.getSseCustomerKey();
-    this.sseCustomerKey = (SSEAlgorithm.AES256.toString().equalsIgnoreCase(ssea)
-        && StringUtils.isNotBlank(sseCustomerKeyConfig))
-      ? new SSECustomerKey(sseCustomerKeyConfig) : null;
+    this.sseCustomerKey =
+        (SSEAlgorithm.AES256.toString().equalsIgnoreCase(ssea)
+                && StringUtils.isNotBlank(sseCustomerKeyConfig))
+            ? new SSECustomerKey(sseCustomerKeyConfig)
+            : null;
     this.sseKmsKeyId = conf.getSseKmsKeyId();
     this.partSize = conf.getPartSize();
     this.cannedAcl = conf.getCannedAcl();
@@ -162,8 +162,7 @@ public class S3OutputStream extends PositionOutputStream {
       log.warn(
           "Tried to commit data for bucket '{}' key '{}' on a closed stream. Ignoring.",
           bucket,
-          key
-      );
+          key);
       return;
     }
 
@@ -177,8 +176,7 @@ public class S3OutputStream extends PositionOutputStream {
     } catch (IOException e) {
       log.error("Multipart upload failed to complete for bucket '{}' key '{}'", bucket, key);
       throw new ConnectException(
-          String.format("Multipart upload failed to complete: %s", e.getMessage())
-      );
+          String.format("Multipart upload failed to complete: %s", e.getMessage()));
     } finally {
       buffer.clear();
       multiPartUpload = null;
@@ -212,14 +210,11 @@ public class S3OutputStream extends PositionOutputStream {
   }
 
   private MultipartUpload newMultipartUpload() throws IOException {
-    InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(
-        bucket,
-        key,
-        newObjectMetadata()
-    ).withCannedACL(cannedAcl);
+    InitiateMultipartUploadRequest initRequest =
+        new InitiateMultipartUploadRequest(bucket, key, newObjectMetadata())
+            .withCannedACL(cannedAcl);
 
-    if (SSEAlgorithm.KMS.toString().equalsIgnoreCase(ssea)
-        && StringUtils.isNotBlank(sseKmsKeyId)) {
+    if (SSEAlgorithm.KMS.toString().equalsIgnoreCase(ssea) && StringUtils.isNotBlank(sseKmsKeyId)) {
       log.debug("Using KMS Key ID: {}", sseKmsKeyId);
       initRequest.setSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(sseKmsKeyId));
     } else if (sseCustomerKey != null) {
@@ -254,21 +249,21 @@ public class S3OutputStream extends PositionOutputStream {
           "Initiated multi-part upload for bucket '{}' key '{}' with id '{}'",
           bucket,
           key,
-          uploadId
-      );
+          uploadId);
     }
 
     public void uploadPart(ByteArrayInputStream inputStream, int partSize) {
       int currentPartNumber = partETags.size() + 1;
-      UploadPartRequest request = new UploadPartRequest()
-                                            .withBucketName(bucket)
-                                            .withKey(key)
-                                            .withUploadId(uploadId)
-                                            .withSSECustomerKey(sseCustomerKey)
-                                            .withInputStream(inputStream)
-                                            .withPartNumber(currentPartNumber)
-                                            .withPartSize(partSize)
-                                            .withGeneralProgressListener(progressListener);
+      UploadPartRequest request =
+          new UploadPartRequest()
+              .withBucketName(bucket)
+              .withKey(key)
+              .withUploadId(uploadId)
+              .withSSECustomerKey(sseCustomerKey)
+              .withInputStream(inputStream)
+              .withPartNumber(currentPartNumber)
+              .withPartSize(partSize)
+              .withGeneralProgressListener(progressListener);
       log.debug("Uploading part {} for id '{}'", currentPartNumber, uploadId);
       partETags.add(s3.uploadPart(request).getPartETag());
     }

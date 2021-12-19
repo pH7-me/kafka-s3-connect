@@ -19,7 +19,16 @@ import static io.confluent.connect.s3.util.Utils.getAdjustedFilename;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.confluent.connect.s3.S3SinkConnectorConfig;
+import io.confluent.connect.s3.format.RecordViewSetter;
 import io.confluent.connect.s3.format.RecordViews.HeaderRecordView;
+import io.confluent.connect.s3.storage.S3OutputStream;
+import io.confluent.connect.s3.storage.S3Storage;
+import io.confluent.connect.storage.format.RecordWriter;
+import io.confluent.connect.storage.format.RecordWriterProvider;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.RetriableException;
@@ -28,25 +37,14 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-
-import io.confluent.connect.s3.S3SinkConnectorConfig;
-import io.confluent.connect.s3.format.RecordViewSetter;
-import io.confluent.connect.s3.storage.S3OutputStream;
-import io.confluent.connect.s3.storage.S3Storage;
-import io.confluent.connect.storage.format.RecordWriter;
-import io.confluent.connect.storage.format.RecordWriterProvider;
-
 public class JsonRecordWriterProvider extends RecordViewSetter
     implements RecordWriterProvider<S3SinkConnectorConfig> {
 
   private static final Logger log = LoggerFactory.getLogger(JsonRecordWriterProvider.class);
   private static final String EXTENSION = ".json";
   private static final String LINE_SEPARATOR = System.lineSeparator();
-  private static final byte[] LINE_SEPARATOR_BYTES
-      = LINE_SEPARATOR.getBytes(StandardCharsets.UTF_8);
+  private static final byte[] LINE_SEPARATOR_BYTES =
+      LINE_SEPARATOR.getBytes(StandardCharsets.UTF_8);
   private final S3Storage storage;
   private final ObjectMapper mapper;
   private final JsonConverter converter;
@@ -69,9 +67,8 @@ public class JsonRecordWriterProvider extends RecordViewSetter
         final String adjustedFilename = getAdjustedFilename(recordView, filename, getExtension());
         final S3OutputStream s3out = storage.create(adjustedFilename, true, JsonFormat.class);
         final OutputStream s3outWrapper = s3out.wrapForCompression();
-        final JsonGenerator writer = mapper.getFactory()
-                                         .createGenerator(s3outWrapper)
-                                         .setRootValueSeparator(null);
+        final JsonGenerator writer =
+            mapper.getFactory().createGenerator(s3outWrapper).setRootValueSeparator(null);
 
         @Override
         public void write(SinkRecord record) {
@@ -81,11 +78,9 @@ public class JsonRecordWriterProvider extends RecordViewSetter
           try {
             Object value = recordView.getView(record, envelop);
             if (value instanceof Struct) {
-              byte[] rawJson = converter.fromConnectData(
-                  record.topic(),
-                  recordView.getViewSchema(record, envelop),
-                  value
-              );
+              byte[] rawJson =
+                  converter.fromConnectData(
+                      record.topic(), recordView.getViewSchema(record, envelop), value);
               s3outWrapper.write(rawJson);
               s3outWrapper.write(LINE_SEPARATOR_BYTES);
             } else {

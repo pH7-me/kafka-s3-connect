@@ -15,30 +15,24 @@
 
 package io.confluent.connect.s3;
 
+import io.confluent.connect.s3.util.Version;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import io.confluent.connect.s3.util.Version;
-
-/**
- * Connector class for Amazon Simple Storage Service (S3).
- */
+/** Connector class for Amazon Simple Storage Service (S3). */
 public class S3SinkConnector extends SinkConnector {
   private static final Logger log = LoggerFactory.getLogger(S3SinkConnector.class);
   private Map<String, String> configProps;
   private S3SinkConnectorConfig config;
 
-  /**
-   * No-arg constructor. It is instantiated by Connect framework.
-   */
+  /** No-arg constructor. It is instantiated by Connect framework. */
   public S3SinkConnector() {
     // no-arg constructor required by Connect framework.
   }
@@ -84,5 +78,4 @@ public class S3SinkConnector extends SinkConnector {
   public ConfigDef config() {
     return S3SinkConnectorConfig.getConfig();
   }
-
 }

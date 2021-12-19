@@ -16,6 +16,10 @@
 
 package io.confluent.connect.s3;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import io.confluent.connect.s3.format.KeyValueHeaderRecordWriterProvider;
@@ -27,10 +31,6 @@ import io.confluent.connect.storage.format.RecordWriter;
 import io.confluent.connect.storage.format.RecordWriterProvider;
 import io.confluent.connect.storage.partitioner.DefaultPartitioner;
 import io.confluent.connect.storage.partitioner.Partitioner;
-import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.connect.sink.SinkRecord;
-import org.powermock.api.mockito.PowerMockito;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -39,14 +39,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.connect.sink.SinkRecord;
+import org.powermock.api.mockito.PowerMockito;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-public abstract class DataWriterTestBase<
-    FORMAT extends Format<S3SinkConnectorConfig, String>
-  > extends TestWithMockedS3 {
+public abstract class DataWriterTestBase<FORMAT extends Format<S3SinkConnectorConfig, String>>
+    extends TestWithMockedS3 {
 
   protected static final String ZERO_PAD_FMT = "%010d";
 
@@ -72,34 +70,29 @@ public abstract class DataWriterTestBase<
    *
    * @param sinkRecords Sink records to verify ewxist on S3 storage
    * @param validOffsets List of valid offsets for these recores
-   *
    * @throws IOException Thrown upon an IO exception,m such as S3 unreachable
    */
   protected abstract void verify(
-      List<SinkRecord> sinkRecords,
-      long[] validOffsets,
-      Set<TopicPartition> partitions
-  ) throws IOException;
+      List<SinkRecord> sinkRecords, long[] validOffsets, Set<TopicPartition> partitions)
+      throws IOException;
 
   /**
-   * Create a generic list of records, usually for purposes other than validating the
-   * correctness of the records' structure themselves.  We don't care whether they do or don't
-   * have a schema, for instance -- just that we can verify that they are records with some
-   * comparable value for correctness validation purposes.
+   * Create a generic list of records, usually for purposes other than validating the correctness of
+   * the records' structure themselves. We don't care whether they do or don't have a schema, for
+   * instance -- just that we can verify that they are records with some comparable value for
+   * correctness validation purposes.
    *
    * @param count Number of records to create
    * @param firstOffset First valid offset for these records
-   *
    * @return A list of the newly-created records
    */
   protected abstract List<SinkRecord> createGenericRecords(int count, long firstOffset);
 
   /**
-   * Return the S3 "directory" that a given topic and partition number are expected to
-   * reside.
+   * Return the S3 "directory" that a given topic and partition number are expected to reside.
+   *
    * @param topic The topic of the records
    * @param partition The partition number
-   *
    * @return A string representing the S3 "directory"
    */
   protected abstract String getDirectory(String topic, int partition);
@@ -107,14 +100,13 @@ public abstract class DataWriterTestBase<
   /**
    * Constructor
    *
-   * @param clazz  A Class<Format type> object for the purpose of creating
-   *               a new format object.
+   * @param clazz A Class<Format type> object for the purpose of creating a new format object.
    */
   protected DataWriterTestBase(final Class<FORMAT> clazz) {
     this.clazz = clazz;
   }
 
-  //@Before should be omitted in order to be able to add properties per test.
+  // @Before should be omitted in order to be able to add properties per test.
   public void setUp() throws Exception {
     localProps.put(S3SinkConnectorConfig.FORMAT_CLASS_CONFIG, clazz.getName());
 
@@ -133,22 +125,25 @@ public abstract class DataWriterTestBase<
     assertTrue(s3.doesBucketExistV2(S3_TEST_BUCKET_NAME));
   }
 
-  protected List<String> getExpectedFiles(long[] validOffsets, TopicPartition tp, String extension) {
+  protected List<String> getExpectedFiles(
+      long[] validOffsets, TopicPartition tp, String extension) {
     List<String> expectedFiles = new ArrayList<>();
     for (int i = 1; i < validOffsets.length; ++i) {
       long startOffset = validOffsets[i - 1];
-      expectedFiles.add(FileUtils.fileKeyToCommit(
-          topicsDir,
-          getDirectory(tp.topic(), tp.partition()),
-          tp,
-          startOffset,
-          extension, ZERO_PAD_FMT));
+      expectedFiles.add(
+          FileUtils.fileKeyToCommit(
+              topicsDir,
+              getDirectory(tp.topic(), tp.partition()),
+              tp,
+              startOffset,
+              extension,
+              ZERO_PAD_FMT));
     }
     return expectedFiles;
   }
 
-  protected List<String> getExpectedFiles(long[] validOffsets, Collection<TopicPartition> partitions,
-                                          String extension) {
+  protected List<String> getExpectedFiles(
+      long[] validOffsets, Collection<TopicPartition> partitions, String extension) {
     List<String> expectedFiles = new ArrayList<>();
     for (TopicPartition tp : partitions) {
       expectedFiles.addAll(getExpectedFiles(validOffsets, tp, extension));
@@ -167,21 +162,20 @@ public abstract class DataWriterTestBase<
     assertThat(actualFiles).containsExactlyInAnyOrderElementsOf(expectedFiles);
   }
 
-  protected void verifyFileListing(long[] validOffsets, Set<TopicPartition> partitions,
-                                   String extension) throws IOException {
+  protected void verifyFileListing(
+      long[] validOffsets, Set<TopicPartition> partitions, String extension) throws IOException {
     List<String> expectedFiles = getExpectedFiles(validOffsets, partitions, extension);
     verifyFileListing(expectedFiles);
   }
 
   /**
-   * Test that what ends up on S3 have the correct files names, given the topic
-   * dir which may have anything in it, such as the file extension itself, etc.
+   * Test that what ends up on S3 have the correct files names, given the topic dir which may have
+   * anything in it, such as the file extension itself, etc.
+   *
    * @param topicDir The directory to save the records
    * @throws Exception On test failure
    */
-  protected void testCorrectRecordWriterHelper(
-      final String topicDir
-  ) throws Exception {
+  protected void testCorrectRecordWriterHelper(final String topicDir) throws Exception {
     localProps.put(StorageCommonConfig.TOPICS_DIR_CONFIG, topicDir);
     setUp();
 
@@ -192,10 +186,10 @@ public abstract class DataWriterTestBase<
     assertEquals(keyValueRecordWriterProvider.getExtension(), getFileExtension());
     assertThat(keyValueRecordWriterProvider).isInstanceOf(KeyValueHeaderRecordWriterProvider.class);
     KeyValueHeaderRecordWriterProvider kvProvider =
-        (KeyValueHeaderRecordWriterProvider)keyValueRecordWriterProvider;
+        (KeyValueHeaderRecordWriterProvider) keyValueRecordWriterProvider;
 
     final int offsetCount = 1;
-    //final int offsetCount = 6;
+    // final int offsetCount = 6;
 
     Set<TopicPartition> partitions = new HashSet<>();
     List<SinkRecord> records = createGenericRecords(offsetCount, 1);
@@ -206,14 +200,14 @@ public abstract class DataWriterTestBase<
       partitions.add(tp);
       Long offset = offsetMap.getOrDefault(tp.partition(), 0L);
       offsetMap.put(tp.partition(), offset + 1);
-      String fileKey = FileUtils.fileKeyToCommit(
-          topicsDir,
-          getDirectory(tp.topic(), tp.partition()),
-          tp,
-          offset,
-          getFileExtension(),
-          ZERO_PAD_FMT
-      );
+      String fileKey =
+          FileUtils.fileKeyToCommit(
+              topicsDir,
+              getDirectory(tp.topic(), tp.partition()),
+              tp,
+              offset,
+              getFileExtension(),
+              ZERO_PAD_FMT);
       expectedFiles.add(fileKey);
       RecordWriter actualRecordWriterProvider =
           kvProvider.getRecordWriter(connectorConfig, fileKey);
@@ -231,12 +225,11 @@ public abstract class DataWriterTestBase<
     // Sanity check to make sure we generated the correct names along the way against
     // what it is going to check for later (not checking against what's actually going to
     // be on S3, which is another check altogether).
-    assertThat(expectedFiles).containsExactlyInAnyOrderElementsOf(
-        getExpectedFiles(validOffsets, partitions, getFileExtension())
-    );
+    assertThat(expectedFiles)
+        .containsExactlyInAnyOrderElementsOf(
+            getExpectedFiles(validOffsets, partitions, getFileExtension()));
 
     // Now check what actually made it to S3
     verify(records, validOffsets, partitions);
   }
-
 }

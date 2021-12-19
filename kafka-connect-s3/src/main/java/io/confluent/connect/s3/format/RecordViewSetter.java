@@ -16,9 +16,9 @@
 
 package io.confluent.connect.s3.format;
 
-import io.confluent.connect.s3.format.RecordViews.ValueRecordView;
-
 import static java.util.Objects.requireNonNull;
+
+import io.confluent.connect.s3.format.RecordViews.ValueRecordView;
 
 public class RecordViewSetter {
   protected RecordView recordView = new ValueRecordView();
@@ -26,5 +26,4 @@ public class RecordViewSetter {
   public void setRecordView(RecordView recordView) {
     this.recordView = requireNonNull(recordView);
   }
-
 }

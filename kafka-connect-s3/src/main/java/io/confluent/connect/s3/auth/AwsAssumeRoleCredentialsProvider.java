@@ -20,15 +20,14 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
+import java.util.Map;
 import org.apache.kafka.common.Configurable;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
-import java.util.Map;
-
 /**
  * AWS credentials provider that uses the AWS Security Token Service to assume a Role and create a
- * temporary, short-lived session to use for authentication.  This credentials provider does not
+ * temporary, short-lived session to use for authentication. This credentials provider does not
  * support refreshing the credentials in a background thread.
  */
 public class AwsAssumeRoleCredentialsProvider implements AWSCredentialsProvider, Configurable {
@@ -37,23 +36,24 @@ public class AwsAssumeRoleCredentialsProvider implements AWSCredentialsProvider,
   public static final String ROLE_ARN_CONFIG = "sts.role.arn";
   public static final String ROLE_SESSION_NAME_CONFIG = "sts.role.session.name";
 
-  private static final ConfigDef STS_CONFIG_DEF = new ConfigDef()
-      .define(
-          ROLE_EXTERNAL_ID_CONFIG,
-          ConfigDef.Type.STRING,
-          ConfigDef.Importance.MEDIUM,
-          "The role external ID used when retrieving session credentials under an assumed role."
-      ).define(
-          ROLE_ARN_CONFIG,
-          ConfigDef.Type.STRING,
-          ConfigDef.Importance.HIGH,
-          "Role ARN to use when starting a session."
-      ).define(
-          ROLE_SESSION_NAME_CONFIG,
-          ConfigDef.Type.STRING,
-          ConfigDef.Importance.HIGH,
-          "Role session name to use when starting a session"
-      );
+  private static final ConfigDef STS_CONFIG_DEF =
+      new ConfigDef()
+          .define(
+              ROLE_EXTERNAL_ID_CONFIG,
+              ConfigDef.Type.STRING,
+              ConfigDef.Importance.MEDIUM,
+              "The role external ID used when retrieving session credentials "
+                  + "under an assumed role.")
+          .define(
+              ROLE_ARN_CONFIG,
+              ConfigDef.Type.STRING,
+              ConfigDef.Importance.HIGH,
+              "Role ARN to use when starting a session.")
+          .define(
+              ROLE_SESSION_NAME_CONFIG,
+              ConfigDef.Type.STRING,
+              ConfigDef.Importance.HIGH,
+              "Role session name to use when starting a session");
 
   private String roleArn;
   private String roleExternalId;
@@ -80,5 +80,4 @@ public class AwsAssumeRoleCredentialsProvider implements AWSCredentialsProvider,
   public void refresh() {
     // Nothing to do really, since we acquire a new session every getCredentials() call.
   }
-
 }

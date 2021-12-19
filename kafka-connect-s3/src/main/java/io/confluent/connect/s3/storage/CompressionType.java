@@ -15,25 +15,23 @@
 
 package io.confluent.connect.s3.storage;
 
-import org.apache.kafka.connect.errors.ConnectException;
-
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+import org.apache.kafka.connect.errors.ConnectException;
 
 /**
  * Supported compression types for formats lacking built-in compression.
  *
- * <p>In particular, the compression here is not used for Avro since the
- * Avro libraries have compression codecs built in.
+ * <p>In particular, the compression here is not used for Avro since the Avro libraries have
+ * compression codecs built in.
  *
- * <p>Closely modeled on {@link org.apache.kafka.common.record.CompressionType}.</p>
+ * <p>Closely modeled on {@link org.apache.kafka.common.record.CompressionType}.
  */
 public enum CompressionType {
-
   NONE("none", ""),
 
   GZIP("gzip", ".gz") {
@@ -74,8 +72,9 @@ public enum CompressionType {
           throw new ConnectException(e);
         }
       } else {
-        throw new ConnectException("Expected compressionFilter to be a DeflaterOutputStream, "
-            + "but was passed an instance that does not match that type.");
+        throw new ConnectException(
+            "Expected compressionFilter to be a DeflaterOutputStream, "
+                + "but was passed an instance that does not match that type.");
       }
     }
   };
@@ -117,8 +116,8 @@ public enum CompressionType {
   }
 
   /**
-   * Wrap {@code out} with a filter that will compress data with this CompressionType at the
-   * given compression level (optional operation).
+   * Wrap {@code out} with a filter that will compress data with this CompressionType at the given
+   * compression level (optional operation).
    *
    * @param out the {@link OutputStream} to wrap
    * @param level the compression level for this compression type
@@ -139,14 +138,12 @@ public enum CompressionType {
   }
 
   /**
-   * Take any action necessary to finalize filter before the underlying
-   * S3OutputStream is committed.
+   * Take any action necessary to finalize filter before the underlying S3OutputStream is committed.
    *
-   * <p>Implementations of this method should make sure to handle the case
-   * where {@code compressionFilter} is null.
+   * <p>Implementations of this method should make sure to handle the case where {@code
+   * compressionFilter} is null.
    *
    * @param compressionFilter a wrapped {@link OutputStream}
    */
   public void finalize(OutputStream compressionFilter) {}
-
 }

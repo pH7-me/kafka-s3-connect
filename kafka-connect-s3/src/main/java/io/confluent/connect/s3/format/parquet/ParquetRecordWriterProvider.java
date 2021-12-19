@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package io.confluent.connect.s3.format.parquet;
 
 import static io.confluent.connect.s3.util.Utils.getAdjustedFilename;
@@ -26,6 +25,7 @@ import io.confluent.connect.s3.storage.S3ParquetOutputStream;
 import io.confluent.connect.s3.storage.S3Storage;
 import io.confluent.connect.storage.format.RecordWriter;
 import io.confluent.connect.storage.format.RecordWriterProvider;
+import java.io.IOException;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -37,8 +37,6 @@ import org.apache.parquet.io.OutputFile;
 import org.apache.parquet.io.PositionOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
 
 public class ParquetRecordWriterProvider extends RecordViewSetter
     implements RecordWriterProvider<S3SinkConnectorConfig> {
@@ -75,8 +73,8 @@ public class ParquetRecordWriterProvider extends RecordViewSetter
             org.apache.avro.Schema avroSchema = avroData.fromConnectSchema(schema);
 
             s3ParquetOutputFile = new S3ParquetOutputFile(storage, adjustedFilename);
-            writer = AvroParquetWriter
-                    .<GenericRecord>builder(s3ParquetOutputFile)
+            writer =
+                AvroParquetWriter.<GenericRecord>builder(s3ParquetOutputFile)
                     .withSchema(avroSchema)
                     .withWriteMode(ParquetFileWriter.Mode.OVERWRITE)
                     .withDictionaryEncoding(true)

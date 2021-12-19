@@ -15,22 +15,20 @@
 
 package io.confluent.connect.s3.storage;
 
-/**
- * A interface for S3OutputStream to write s3-part.
- */
+/** A interface for S3OutputStream to write s3-part. */
 public interface ByteBuf {
 
-    void put(byte b);
+  void put(byte b);
 
-    void put(byte[] src, int offset, int length);
+  void put(byte[] src, int offset, int length);
 
-    boolean hasRemaining();
+  boolean hasRemaining();
 
-    int remaining();
+  int remaining();
 
-    int position();
+  int position();
 
-    void clear();
+  void clear();
 
-    byte[] array();
+  byte[] array();
 }

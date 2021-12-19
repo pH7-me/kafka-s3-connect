@@ -17,26 +17,9 @@ package io.confluent.connect.s3;
 
 import com.amazonaws.AmazonClientException;
 import com.google.common.annotations.VisibleForTesting;
-import io.confluent.connect.s3.S3SinkConnectorConfig.BehaviorOnNullValues;
-import org.apache.kafka.clients.consumer.OffsetAndMetadata;
-import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.connect.errors.ConnectException;
-import org.apache.kafka.connect.errors.DataException;
-import org.apache.kafka.connect.errors.RetriableException;
-import org.apache.kafka.connect.sink.ErrantRecordReporter;
-import org.apache.kafka.connect.sink.SinkRecord;
-import org.apache.kafka.connect.sink.SinkTask;
-import org.apache.kafka.connect.sink.SinkTaskContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.InvocationTargetException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-
 import io.confluent.common.utils.SystemTime;
 import io.confluent.common.utils.Time;
+import io.confluent.connect.s3.S3SinkConnectorConfig.BehaviorOnNullValues;
 import io.confluent.connect.s3.format.KeyValueHeaderRecordWriterProvider;
 import io.confluent.connect.s3.format.RecordViewSetter;
 import io.confluent.connect.s3.format.RecordViews.HeaderRecordView;
@@ -49,6 +32,21 @@ import io.confluent.connect.storage.format.Format;
 import io.confluent.connect.storage.format.RecordWriterProvider;
 import io.confluent.connect.storage.partitioner.Partitioner;
 import io.confluent.connect.storage.partitioner.PartitionerConfig;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.errors.RetriableException;
+import org.apache.kafka.connect.sink.ErrantRecordReporter;
+import org.apache.kafka.connect.sink.SinkRecord;
+import org.apache.kafka.connect.sink.SinkTask;
+import org.apache.kafka.connect.sink.SinkTaskContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class S3SinkTask extends SinkTask {
   private static final Logger log = LoggerFactory.getLogger(S3SinkTask.class);
@@ -64,9 +62,7 @@ public class S3SinkTask extends SinkTask {
   private final Time time;
   private ErrantRecordReporter reporter;
 
-  /**
-   * No-arg constructor. Used by Connect framework.
-   */
+  /** No-arg constructor. Used by Connect framework. */
   public S3SinkTask() {
     // no-arg constructor required by Connect framework.
     topicPartitionWriters = new HashMap<>();
@@ -74,9 +70,14 @@ public class S3SinkTask extends SinkTask {
   }
 
   // visible for testing.
-  S3SinkTask(S3SinkConnectorConfig connectorConfig, SinkTaskContext context, S3Storage storage,
-             Partitioner<?> partitioner, Format<S3SinkConnectorConfig, String> format,
-             Time time) throws Exception {
+  S3SinkTask(
+      S3SinkConnectorConfig connectorConfig,
+      SinkTaskContext context,
+      S3Storage storage,
+      Partitioner<?> partitioner,
+      Format<S3SinkConnectorConfig, String> format,
+      Time time)
+      throws Exception {
     this.topicPartitionWriters = new HashMap<>();
     this.connectorConfig = connectorConfig;
     this.context = context;
@@ -89,9 +90,8 @@ public class S3SinkTask extends SinkTask {
     writerProvider = this.format.getRecordWriterProvider();
 
     open(context.assignment());
-    log.info("Started S3 connector task with assigned partitions {}",
-        topicPartitionWriters.keySet()
-    );
+    log.info(
+        "Started S3 connector task with assigned partitions {}", topicPartitionWriters.keySet());
   }
 
   public void start(Map<String, String> props) {
@@ -104,12 +104,9 @@ public class S3SinkTask extends SinkTask {
       Class<? extends S3Storage> storageClass =
           (Class<? extends S3Storage>)
               connectorConfig.getClass(StorageCommonConfig.STORAGE_CLASS_CONFIG);
-      storage = StorageFactory.createStorage(
-          storageClass,
-          S3SinkConnectorConfig.class,
-          connectorConfig,
-          url
-      );
+      storage =
+          StorageFactory.createStorage(
+              storageClass, S3SinkConnectorConfig.class, connectorConfig, url);
       if (!storage.bucketExists()) {
         throw new ConnectException("Non-existent S3 bucket: " + connectorConfig.getBucketName());
       }
@@ -125,15 +122,18 @@ public class S3SinkTask extends SinkTask {
         }
       } catch (NoSuchMethodError | NoClassDefFoundError | UnsupportedOperationException e) {
         // Will occur in Connect runtimes earlier than 2.6
-        log.warn("Connect versions prior to Apache Kafka 2.6 do not support "
-            + "the errant record reporter");
+        log.warn(
+            "Connect versions prior to Apache Kafka 2.6 do not support "
+                + "the errant record reporter");
       }
 
-      log.info("Started S3 connector task with assigned partitions: {}",
-          topicPartitionWriters.keySet()
-      );
-    } catch (ClassNotFoundException | IllegalAccessException | InstantiationException
-        | InvocationTargetException | NoSuchMethodException e) {
+      log.info(
+          "Started S3 connector task with assigned partitions: {}", topicPartitionWriters.keySet());
+    } catch (ClassNotFoundException
+        | IllegalAccessException
+        | InstantiationException
+        | InvocationTargetException
+        | NoSuchMethodException e) {
       throw new ConnectException("Reflection exception: ", e);
     } catch (AmazonClientException e) {
       throw new ConnectException(e);
@@ -155,7 +155,7 @@ public class S3SinkTask extends SinkTask {
   @SuppressWarnings("unchecked")
   private Format<S3SinkConnectorConfig, String> newFormat(String formatClassConfig)
       throws ClassNotFoundException, IllegalAccessException, InstantiationException,
-             InvocationTargetException, NoSuchMethodException {
+          InvocationTargetException, NoSuchMethodException {
     Class<Format<S3SinkConnectorConfig, String>> formatClass =
         (Class<Format<S3SinkConnectorConfig, String>>) connectorConfig.getClass(formatClassConfig);
     return formatClass.getConstructor(S3Storage.class).newInstance(storage);
@@ -165,21 +165,21 @@ public class S3SinkTask extends SinkTask {
   public RecordWriterProvider<S3SinkConnectorConfig> newRecordWriterProvider(
       S3SinkConnectorConfig config)
       throws ClassNotFoundException, InvocationTargetException, InstantiationException,
-      NoSuchMethodException, IllegalAccessException {
+          NoSuchMethodException, IllegalAccessException {
 
     RecordWriterProvider<S3SinkConnectorConfig> valueWriterProvider =
         newFormat(S3SinkConnectorConfig.FORMAT_CLASS_CONFIG).getRecordWriterProvider();
 
     RecordWriterProvider<S3SinkConnectorConfig> keyWriterProvider = null;
     if (config.getBoolean(S3SinkConnectorConfig.STORE_KAFKA_KEYS_CONFIG)) {
-      keyWriterProvider = newFormat(S3SinkConnectorConfig.KEYS_FORMAT_CLASS_CONFIG)
-          .getRecordWriterProvider();
+      keyWriterProvider =
+          newFormat(S3SinkConnectorConfig.KEYS_FORMAT_CLASS_CONFIG).getRecordWriterProvider();
       ((RecordViewSetter) keyWriterProvider).setRecordView(new KeyRecordView());
     }
     RecordWriterProvider<S3SinkConnectorConfig> headerWriterProvider = null;
     if (config.getBoolean(S3SinkConnectorConfig.STORE_KAFKA_HEADERS_CONFIG)) {
-      headerWriterProvider = newFormat(S3SinkConnectorConfig.HEADERS_FORMAT_CLASS_CONFIG)
-          .getRecordWriterProvider();
+      headerWriterProvider =
+          newFormat(S3SinkConnectorConfig.HEADERS_FORMAT_CLASS_CONFIG).getRecordWriterProvider();
       ((RecordViewSetter) headerWriterProvider).setRecordView(new HeaderRecordView());
     }
 
@@ -250,18 +250,20 @@ public class S3SinkTask extends SinkTask {
 
   private boolean maybeSkipOnNullValue(SinkRecord record) {
     if (record.value() == null) {
-      if (connectorConfig.nullValueBehavior()
+      if (connectorConfig
+          .nullValueBehavior()
           .equalsIgnoreCase(BehaviorOnNullValues.IGNORE.toString())) {
         log.debug(
             "Null valued record from topic '{}', partition {} and offset {} was skipped.",
             record.topic(),
             record.kafkaPartition(),
-            record.kafkaOffset()
-        );
+            record.kafkaOffset());
         return true;
       } else {
-        throw new ConnectException("Null valued records are not writeable with current "
-            + S3SinkConnectorConfig.BEHAVIOR_ON_NULL_VALUES_CONFIG + " 'settings.");
+        throw new ConnectException(
+            "Null valued records are not writeable with current "
+                + S3SinkConnectorConfig.BEHAVIOR_ON_NULL_VALUES_CONFIG
+                + " 'settings.");
       }
     }
     return false;
@@ -274,8 +276,7 @@ public class S3SinkTask extends SinkTask {
 
   @Override
   public Map<TopicPartition, OffsetAndMetadata> preCommit(
-      Map<TopicPartition, OffsetAndMetadata> offsets
-  ) {
+      Map<TopicPartition, OffsetAndMetadata> offsets) {
     Map<TopicPartition, OffsetAndMetadata> offsetsToCommit = new HashMap<>();
     for (TopicPartition tp : topicPartitionWriters.keySet()) {
       Long offset = topicPartitionWriters.get(tp).getOffsetToCommitAndReset();
@@ -317,15 +318,7 @@ public class S3SinkTask extends SinkTask {
 
   private TopicPartitionWriter newTopicPartitionWriter(TopicPartition tp) {
     return new TopicPartitionWriter(
-        tp,
-        storage,
-        writerProvider,
-        partitioner,
-        connectorConfig,
-        context,
-        time,
-        reporter
-    );
+        tp, storage, writerProvider, partitioner, connectorConfig, context, time, reporter);
   }
 
   // Visible for testing

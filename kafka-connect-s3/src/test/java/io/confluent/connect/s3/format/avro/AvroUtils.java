@@ -13,8 +13,15 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package  io.confluent.connect.s3.format.avro;
+package io.confluent.connect.s3.format.avro;
 
+import io.confluent.connect.avro.AvroData;
+import io.confluent.kafka.serializers.NonRecordContainer;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collection;
 import org.apache.avro.file.DataFileStream;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericDatumReader;
@@ -22,15 +29,6 @@ import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.io.DatumReader;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collection;
-
-import io.confluent.connect.avro.AvroData;
-import io.confluent.kafka.serializers.NonRecordContainer;
 
 public class AvroUtils {
 
@@ -45,7 +43,8 @@ public class AvroUtils {
     return records;
   }
 
-  public static byte[] putRecords(Collection<SinkRecord> records, AvroData avroData) throws IOException {
+  public static byte[] putRecords(Collection<SinkRecord> records, AvroData avroData)
+      throws IOException {
     final DataFileWriter<Object> writer = new DataFileWriter<>(new GenericDatumWriter<>());
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Schema schema = null;
@@ -66,5 +65,4 @@ public class AvroUtils {
     writer.flush();
     return out.toByteArray();
   }
-
 }

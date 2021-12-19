@@ -18,140 +18,139 @@ package io.confluent.connect.s3.storage;
 import java.nio.BufferOverflowException;
 
 /**
- * A elastic byte buffer with a logic size as max size.
- * The formula to expand: initCapacity * 2 ^ (incrementFactor * N)
+ * A elastic byte buffer with a logic size as max size. The formula to expand: initCapacity * 2 ^
+ * (incrementFactor * N)
  */
 public class ElasticByteBuffer implements ByteBuf {
 
-    public static final int INCREMENT_FACTOR = 1;
+  public static final int INCREMENT_FACTOR = 1;
 
-    /* logical capacity */
-    private int capacity;
+  /* logical capacity */
+  private int capacity;
 
-    /* initial physical capacity  */
-    private int initPhysicalCap;
+  /* initial physical capacity  */
+  private int initPhysicalCap;
 
-    /* the next position to write */
-    private int position;
+  /* the next position to write */
+  private int position;
 
-    /* physical buf */
-    private byte[] buf;
+  /* physical buf */
+  private byte[] buf;
 
-    public ElasticByteBuffer(int capacity, int initPhysicalCap) {
-        if (capacity <= 0) {
-            throw new IllegalArgumentException("capacity must greater than zero");
-        }
-
-        if (initPhysicalCap <= 0) {
-            throw new IllegalArgumentException("initial physical capacity must greater than zero");
-        }
-
-        this.capacity = capacity;
-        this.initPhysicalCap = initPhysicalCap;
-
-        initialize();
+  public ElasticByteBuffer(int capacity, int initPhysicalCap) {
+    if (capacity <= 0) {
+      throw new IllegalArgumentException("capacity must greater than zero");
     }
 
-    private void initialize() {
-        this.position = 0;
-        int initCapacity = Math.min(this.capacity, this.initPhysicalCap);
-        this.buf = new byte[initCapacity];
+    if (initPhysicalCap <= 0) {
+      throw new IllegalArgumentException("initial physical capacity must greater than zero");
     }
 
-    private void expand() {
-        int currSize = this.buf.length;
-        int calNewSize = currSize << INCREMENT_FACTOR;
+    this.capacity = capacity;
+    this.initPhysicalCap = initPhysicalCap;
 
-        int newSize = 0;
-        if (calNewSize < currSize) {
-            // down overflow
-            newSize = this.capacity;
-        } else {
-            newSize = Math.min(this.capacity, calNewSize);
-        }
+    initialize();
+  }
 
-        byte[] currBuf = this.buf;
-        this.buf = new byte[newSize];
-        System.arraycopy(currBuf, 0, this.buf, 0, currSize);
+  private void initialize() {
+    this.position = 0;
+    int initCapacity = Math.min(this.capacity, this.initPhysicalCap);
+    this.buf = new byte[initCapacity];
+  }
+
+  private void expand() {
+    int currSize = this.buf.length;
+    int calNewSize = currSize << INCREMENT_FACTOR;
+
+    int newSize = 0;
+    if (calNewSize < currSize) {
+      // down overflow
+      newSize = this.capacity;
+    } else {
+      newSize = Math.min(this.capacity, calNewSize);
     }
 
-    public void put(byte b) {
-        if (!hasRemaining()) {
-            throw new BufferOverflowException();
-        }
+    byte[] currBuf = this.buf;
+    this.buf = new byte[newSize];
+    System.arraycopy(currBuf, 0, this.buf, 0, currSize);
+  }
 
-        if (physicalRemaining() <= 0) {
-            // expand physical buf
-            expand();
-        }
-
-        this.buf[this.position] = b;
-        this.position++;
+  public void put(byte b) {
+    if (!hasRemaining()) {
+      throw new BufferOverflowException();
     }
 
-    public void put(byte[] src, int offset, int length) {
-
-        checkBounds(offset, length, src.length);
-
-        if (!hasRemaining()) {
-            throw new BufferOverflowException();
-        }
-
-        int remainingOffset = offset;
-        int remainingLen = length;
-        while (true) {
-            if (physicalRemaining() <= 0) {
-                // expand physical buf
-                expand();
-            }
-
-            if (physicalRemaining() >= remainingLen) {
-                System.arraycopy(src, remainingOffset, this.buf, this.position, remainingLen);
-                this.position += remainingLen;
-                break;
-            } else {
-                int physicalRemaining = physicalRemaining();
-                System.arraycopy(src, remainingOffset, this.buf, this.position, physicalRemaining);
-                this.position += physicalRemaining;
-                remainingOffset += physicalRemaining;
-                remainingLen -= physicalRemaining;
-            }
-        }
+    if (physicalRemaining() <= 0) {
+      // expand physical buf
+      expand();
     }
 
-    static void checkBounds(int off, int len, int size) { // package-private
-        if ((off | len | (off + len) | (size - (off + len))) < 0) {
-            throw new IndexOutOfBoundsException();
-        }
+    this.buf[this.position] = b;
+    this.position++;
+  }
+
+  public void put(byte[] src, int offset, int length) {
+
+    checkBounds(offset, length, src.length);
+
+    if (!hasRemaining()) {
+      throw new BufferOverflowException();
     }
 
-    public int physicalRemaining() {
-        return this.buf.length - this.position;
-    }
+    int remainingOffset = offset;
+    int remainingLen = length;
+    while (true) {
+      if (physicalRemaining() <= 0) {
+        // expand physical buf
+        expand();
+      }
 
-    public boolean hasRemaining() {
-        return capacity > position;
+      if (physicalRemaining() >= remainingLen) {
+        System.arraycopy(src, remainingOffset, this.buf, this.position, remainingLen);
+        this.position += remainingLen;
+        break;
+      } else {
+        int physicalRemaining = physicalRemaining();
+        System.arraycopy(src, remainingOffset, this.buf, this.position, physicalRemaining);
+        this.position += physicalRemaining;
+        remainingOffset += physicalRemaining;
+        remainingLen -= physicalRemaining;
+      }
     }
+  }
 
-    public int remaining() {
-        return capacity - position;
+  static void checkBounds(int off, int len, int size) { // package-private
+    if ((off | len | (off + len) | (size - (off + len))) < 0) {
+      throw new IndexOutOfBoundsException();
     }
+  }
 
-    public int position() {
-        return this.position;
+  public int physicalRemaining() {
+    return this.buf.length - this.position;
+  }
+
+  public boolean hasRemaining() {
+    return capacity > position;
+  }
+
+  public int remaining() {
+    return capacity - position;
+  }
+
+  public int position() {
+    return this.position;
+  }
+
+  public void clear() {
+    if (this.buf.length <= this.initPhysicalCap) {
+      // has not ever expanded, just reset position
+      this.position = 0;
+    } else {
+      initialize();
     }
+  }
 
-    public void clear() {
-        if (this.buf.length <= this.initPhysicalCap) {
-            // has not ever expanded, just reset position
-            this.position = 0;
-        } else {
-            initialize();
-        }
-    }
-
-    public final byte[] array() {
-        return this.buf;
-    }
-
+  public final byte[] array() {
+    return this.buf;
+  }
 }
