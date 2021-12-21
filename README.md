@@ -1,5 +1,6 @@
 # Kafka Connect Connector for S3
 
+This project is mirror of a [Confluent's open source project](https://github.com/confluentinc/kafka-connect-storage-cloud).
 
 *kafka-connect-storage-cloud* is the repository for Confluent's [Kafka Connectors](http://kafka.apache.org/documentation.html#connect)
 designed to be used to copy data from Kafka into Amazon S3. 
