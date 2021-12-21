@@ -169,6 +169,15 @@ public class S3SinkConnectorConfig extends StorageSinkConnectorConfig {
   public static final String S3_PATH_STYLE_ACCESS_ENABLED_CONFIG = "s3.path.style.access.enabled";
   public static final boolean S3_PATH_STYLE_ACCESS_ENABLED_DEFAULT = true;
 
+  public static final String S3_PATH_FORCE_LOWERCASE_CONFIG = "s3.path.force.lowercase";
+  public static final boolean S3_PATH_FORCE_LOWERCASE_DEFAULT = false;
+
+  public static final String S3_UPLOAD_PARALLELIZATION_CONFIG = "s3.part.upload.parallelization";
+
+  public static final String S3_UPLOAD_PARALLELIZATION_ENABLED_CONFIG =
+      "s3.part.upload.parallelization.enabled";
+  public static final boolean S3_UPLOAD_PARALLELIZATION_ENABLED_DEFAULT = false;
+
   public static final String STORE_KAFKA_KEYS_CONFIG = "store.kafka.keys";
   public static final String STORE_KAFKA_HEADERS_CONFIG = "store.kafka.headers";
   public static final String KEYS_FORMAT_CLASS_CONFIG = "keys.format.class";
@@ -649,6 +658,43 @@ public class S3SinkConnectorConfig extends StorageSinkConnectorConfig {
           ++orderInGroup,
           Width.SHORT,
           "Enable Path Style Access to S3");
+
+      configDef.define(
+          S3_PATH_FORCE_LOWERCASE_CONFIG,
+          Type.BOOLEAN,
+          S3_PATH_FORCE_LOWERCASE_DEFAULT,
+          Importance.LOW,
+          "Force s3 path string to be lower cases.",
+          group,
+          ++orderInGroup,
+          Width.LONG,
+          "S3 Path's Letter Case");
+
+      configDef.define(
+          S3_UPLOAD_PARALLELIZATION_ENABLED_CONFIG,
+          Type.BOOLEAN,
+          S3_UPLOAD_PARALLELIZATION_ENABLED_DEFAULT,
+          Importance.HIGH,
+          "Force s3 upload parallelization.",
+          group,
+          ++orderInGroup,
+          Width.LONG,
+          "Enable s3 upload parallelization");
+
+      configDef.define(
+          S3_UPLOAD_PARALLELIZATION_CONFIG,
+          Type.INT,
+          Math.max(1, Runtime.getRuntime().availableProcessors()), // Default to number of cores
+          Importance.LOW,
+          "Parallelization of S3 Multi-part Uploads. Increasing it will"
+              + " cause more parallel requests to S3, as well as memory use as multiple"
+              + " parts will remain in memory as they are being uploaded. The amount of"
+              + " memory required for holding consumed data in memory during upload is"
+              + " roughly (s3.part.upload.parallelization + 1) * s3.part.size",
+          group,
+          ++orderInGroup,
+          Width.LONG,
+          "S3 Upload Parallelization");
     }
     return configDef;
   }
@@ -699,6 +745,14 @@ public class S3SinkConnectorConfig extends StorageSinkConnectorConfig {
 
   public int getElasticBufferInitCap() {
     return getInt(ELASTIC_BUFFER_INIT_CAPACITY);
+  }
+
+  public boolean getUploadParallelizationEnable() {
+    return getBoolean(S3_UPLOAD_PARALLELIZATION_ENABLED_CONFIG);
+  }
+
+  public int getUploadParallelization() {
+    return getInt(S3_UPLOAD_PARALLELIZATION_CONFIG);
   }
 
   public String getBucketName() {

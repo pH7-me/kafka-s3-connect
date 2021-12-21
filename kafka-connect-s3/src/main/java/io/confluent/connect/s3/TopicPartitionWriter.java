@@ -88,6 +88,7 @@ public class TopicPartitionWriter {
   private final String zeroPadOffsetFormat;
   private final String dirDelim;
   private final String fileDelim;
+  private boolean isLowercaseForced;
   private final Time time;
   private DateTimeZone timeZone;
   private final S3SinkConnectorConfig connectorConfig;
@@ -166,6 +167,8 @@ public class TopicPartitionWriter {
         "%0"
             + connectorConfig.getInt(S3SinkConnectorConfig.FILENAME_OFFSET_ZERO_PAD_WIDTH_CONFIG)
             + "d";
+    isLowercaseForced =
+        connectorConfig.getBoolean(S3SinkConnectorConfig.S3_PATH_FORCE_LOWERCASE_CONFIG);
 
     // Initialize scheduled rotation timer if applicable
     setNextScheduledRotation();
@@ -228,6 +231,9 @@ public class TopicPartitionWriter {
         String encodedPartition;
         try {
           encodedPartition = partitioner.encodePartition(record, now);
+          if (isLowercaseForced) {
+            encodedPartition = encodedPartition.toLowerCase();
+          }
         } catch (PartitionException e) {
           if (reporter != null) {
             reporter.report(record, e);
